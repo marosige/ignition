@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+###############################################################################
+# Delete all sample files, nfo files, sample folders, and empty folders in a directory
+# This is useful for cleaning up video directories after downloading
+# It is recommended to first list the files and folders to be deleted before running the delete commands
+###############################################################################
+
+# Colors for logging
+BRIGHT_BLUE='\033[0;94m'
+NC='\033[0m' # No Color (resets to default)
+
+# Check for -y flag
+AUTO_CONFIRM=false
+if [[ "$1" == "-y" ]]; then
+    AUTO_CONFIRM=true
+fi
+
+# Function to log and delete files
+log_and_delete() {
+    local task="$1"
+    local find_flags="$2"
+
+    echo -e "${BRIGHT_BLUE}[>]${NC} $task"
+    find . $find_flags -print
+
+    if [ "$AUTO_CONFIRM" = true ]; then
+        find . $find_flags -delete
+    else
+        read -p "Do you want to delete these files? (y/N): " confirm
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            find . $find_flags -delete
+        else
+            echo "Skipping deletion of $task."
+        fi
+    fi
+}
+
+log_and_delete "Delete sample and nfo files" "-name '*sample*' -o -name '*.nfo' -type f"
+log_and_delete "Delete sample folders" "-name 'Sample' -type d"
+log_and_delete "Delete empty folders" "-empty -type d"

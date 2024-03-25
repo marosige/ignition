@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+###############################################################################
+# Print the color palette
+###############################################################################
+
+# Define ANSI escape codes
+BLACK="\033[0;30m"
+BRIGHT_BLACK="\033[0;90m"
+RED="\033[0;31m"
+BRIGHT_RED="\033[0;91m"
+GREEN="\033[0;32m"
+BRIGHT_GREEN="\033[0;92m"
+YELLOW="\033[0;33m"
+BRIGHT_YELLOW="\033[0;93m"
+BLUE="\033[0;34m"
+BRIGHT_BLUE="\033[0;94m"
+MAGENTA="\033[0;35m"
+BRIGHT_MAGENTA="\033[0;95m"
+CYAN="\033[0;36m"
+BRIGHT_CYAN="\033[0;96m"
+WHITE="\033[0;37m"
+BRIGHT_WHITE="\033[0;97m"
+DEFAULT="\033[0;38m"
+BRIGHT_DEFAULT="\033[0;98m"
+REVERT='\033[0m'
+
+# Display colored text
+echo -e "${BLACK}BLACK\t  ${BRIGHT_BLACK}BRIGHT_BLACK"
+echo -e "${RED}RED\t  ${BRIGHT_RED}BRIGHT_RED"
+echo -e "${GREEN}GREEN\t  ${BRIGHT_GREEN}BRIGHT_GREEN"
+echo -e "${YELLOW}YELLOW\t  ${BRIGHT_YELLOW}BRIGHT_YELLOW"
+echo -e "${BLUE}BLUE\t  ${BRIGHT_BLUE}BRIGHT_BLUE"
+echo -e "${MAGENTA}MAGENTA\t  ${BRIGHT_MAGENTA}BRIGHT_MAGENTA"
+echo -e "${CYAN}CYAN\t  ${BRIGHT_CYAN}BRIGHT_CYAN"
+echo -e "${WHITE}WHITE\t  ${BRIGHT_WHITE}BRIGHT_WHITE"
+echo -e "${DEFAULT}DEFAULT\t  ${BRIGHT_DEFAULT}BRIGHT_DEFAULT"
+echo
+
+# Function to print color square
+print_color_square() {
+    local color_code="$1"
+    local text="   "  # 3 spaces
+    echo -ne "\033[${color_code}m${text}${REVERT}"
+}
+
+# Loop through regular colors
+for ((i = 0; i < 8; i++)); do
+    color_code="4${i}"
+    print_color_square "${color_code}"
+done
+echo
+
+# Loop through bright colors
+for ((i = 0; i < 8; i++)); do
+    color_code="10${i}"
+    print_color_square "${color_code}"
+done
+echo

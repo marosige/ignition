@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+[ -z "$IGNITION_ROOT" ] && source ~/.ignition/bootstrap.sh
+
+######################################################################################
+# This script executes all executable .sh files inside the given folder.
+# Usage: ./script.sh /path/to/folder
+#
+# Made by Gergely Marosi - https://github.com/marosige
+######################################################################################
+
+# Ensure a folder is provided
+if [ -z "$1" ]; then
+    echo -e "$IGNITION_FAIL Usage: $0 <folder_path>"
+    exit 1
+fi
+
+SCRIPT_FOLDER="$1"
+
+# Check if the provided folder exists
+if [ ! -d "$SCRIPT_FOLDER" ]; then
+    echo -e "$IGNITION_FAIL Folder '$SCRIPT_FOLDER' does not exist."
+    exit 1
+fi
+
+echo -e "$IGNITION_TASK Running scripts in: $SCRIPT_FOLDER"
+
+# Find all .sh files and execute only those that have execute permissions
+find "$SCRIPT_FOLDER" -type f -name "*.sh" -print0 | while IFS= read -r -d '' script; do
+    if [ -x "$script" ]; then
+        script_name=$(basename "$script")
+        echo -e "$IGNITION_TASK Executing: $script_name"
+        bash "$script" || echo -e "$IGNITION_FAIL Error executing: $script_name"
+    fi
+done
+
+echo -e "$IGNITION_DONE All scripts executed."

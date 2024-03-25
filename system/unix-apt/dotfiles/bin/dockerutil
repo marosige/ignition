@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# Define the path to the docker-compose.yml file
+COMPOSE_FILE="$HOME/docker/docker-compose.yml"
+COMPOSE_CMD="docker-compose -f $COMPOSE_FILE"
+
+# Function to get local IP address
+get_local_ip() {
+    # Use ip or ifconfig command to get the local IP address
+    ip addr show eth0 | grep -oP 'inet \K[\d.]+'
+}
+
+# Function to show Docker Compose information
+show_info() {
+    echo "Showing Docker Compose info..."
+    $COMPOSE_CMD config
+}
+
+# Function to show Docker Compose status (ps)
+show_status() {
+    echo "Showing Docker Compose status..."
+    $COMPOSE_CMD ps
+}
+
+# Function to start Docker Compose in detached mode
+start_compose() {
+    echo "Starting Docker Compose in detached mode..."
+    $COMPOSE_CMD up -d
+}
+
+# Function to stop Docker Compose
+stop_compose() {
+    echo "Stopping Docker Compose..."
+    $COMPOSE_CMD down
+}
+
+# Print usage if no arguments are passed
+usage() {
+    echo "Usage: $0 {info|status|start|stop}"
+    exit 1
+}
+
+# Check the passed argument and call the appropriate function
+case "$1" in
+    info)
+        show_info
+        ;;
+    status)
+        show_status
+        ;;
+    start)
+        start_compose
+        ;;
+    stop)
+        stop_compose
+        ;;
+    *)
+        usage
+        ;;
+esac

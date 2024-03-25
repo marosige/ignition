@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+###############################################################################
+# This script provides a menu using gum if available, otherwise using select.
+# It outputs the selected choice to be used by the calling script.
+#
+# Made by Gergely Marosi - https://github.com/marosige
+###############################################################################
+
+# Check if options are passed as arguments
+if [ -z "$1" ]; then
+    echo "Usage: $0 <option1> <option2> ..."
+    exit 1
+fi
+
+# Ensure options are in an array
+options=("$@")
+
+# Use gum if available, otherwise fall back to select
+if command -v gum &> /dev/null; then
+    # Using gum to display the menu and capture the choice
+    choice=$(gum choose "${options[@]}")
+else
+    # Use the traditional select if gum isn't available
+    PS3="Please select an option: "  # Prompt for the menu
+    select choice in "${options[@]}"; do
+        if [ -n "$choice" ]; then
+            break
+        else
+            echo -e "Invalid option. Please try again."
+        fi
+    done
+fi
+
+# Output the selected choice (to be used by the calling script)
+echo "$choice"

@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+###############################################################################
+# Add execute permission to all .sh files in folder
+###############################################################################
+
+# Check if a directory is provided as the first argument
+if [ -n "$1" ] && [ -d "$1" ]; then
+    # Change directory to the specified directory
+    cd "$1" || exit
+fi
+
+# Initialize an empty array to store non-executable .sh files
+non_executable_files=()
+
+# Loop through all .sh files in the current directory
+while IFS= read -r -d '' file; do
+    # Check if the file is not executable
+    if [ ! -x "$file" ]; then
+        # Add the file to the array
+        non_executable_files+=("$file")
+    fi
+done < <(find . -maxdepth 1 -type f -name "*.sh" -print0)
+
+# Check if the array is empty
+if [ ${#non_executable_files[@]} -eq 0 ]; then
+    echo "There are no non-executable .sh files in"
+    echo "$(pwd)"
+    echo "Exiting..."
+    exit 0
+fi
+
+# Print the non-executable .sh files in the array
+echo "This script will add execute permissions to these .sh files:"
+for file in "${non_executable_files[@]}"; do
+    echo "$file"
+done
+
+read -r -p $'Do you want to continue?\033[0;1m [Y/n] \033[0m' response
+case "$response" in
+  [yY][eE][sS]|[yY])
+    # Add execute permissions to non-executable .sh files
+    for file in "${non_executable_files[@]}"; do
+        chmod +x "$file"
+        echo "Added execute permissions to $file"
+    done
+    echo "All .sh files in the current directory are now executable."
+    ;;
+  *)
+    echo "Exiting..."
+    exit 0
+    ;;
+esac

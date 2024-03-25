@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+[ -z "$IGNITION_ROOT" ] && source ~/.ignition/bootstrap.sh
+
+###############################################################################
+# This script links files (usually dotfiles)
+#
+# Parameters:
+#   1) source folder: The root directory where files to link are stored.
+#   2) destination folder: The directory where symbolic links will be created.
+#
+# Usage:
+#   ./link_directory.sh <source-folder> <destination-folder>
+#
+# Made by Gergely Marosi - https://github.com/marosige
+###############################################################################
+
+# Check if two arguments are provided
+if [ "$#" -ne 2 ]; then
+    echo -e "$IGNITION_FAIL Usage: $0 SOURCE_DIR DEST_DIR"
+    exit 1
+fi
+
+SOURCE_DIR="$1"
+DEST_DIR="$2"
+
+# Ensure source directory exists
+if [ ! -d "$SOURCE_DIR" ]; then
+    echo -e "$IGNITION_FAIL Error: Source directory does not exist."
+    exit 1
+fi
+
+# Ensure destination directory exists
+mkdir -p "$DEST_DIR"
+
+# Iterate over files and directories (including dotfiles)
+find "$SOURCE_DIR" -mindepth 1 -print0 | while IFS= read -r -d '' src; do
+    # Determine relative path
+    rel_path="${src#$SOURCE_DIR/}"
+    dest="$DEST_DIR/$rel_path"
+    
+    # Create parent directory if necessary
+    mkdir -p "$(dirname "$dest")"
+    
+    # Skip directory links
+    if [ -d "$src" ]; then
+        continue
+    fi
+    
+    # Check if destination already exists
+    if [ -e "$dest" ]; then
+        echo -e "$IGNITION_DONE Overwritten symlink: $dest -> $src"
+    else
+        echo -e "$IGNITION_ADD Created symlink: $dest -> $src"
+    fi
+    ln -sfn "$src" "$dest"
+done
+
+echo -e "$IGNITION_DONE All files have been symlinked."

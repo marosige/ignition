@@ -1,0 +1,262 @@
+#!/usr/bin/env bash
+
+###############################################################################
+# Make your scripts print in a nice colorful way
+# Made by Gergely Marosi - https://github.com/marosige
+###############################################################################
+
+# Define escape character
+ESCAPE_CHARACTER='\033['
+
+# Define reset code
+RESET='0'
+
+# Define text attributes
+PARAMETER_BOLD='1'
+PARAMETER_FAINT='2'
+PARAMETER_ITALIC='3'
+PARAMETER_UNDERLINE='4'
+PARAMETER_BLINK='5'
+PARAMETER_FAST_BLINK='6'
+PARAMETER_REVERSE='7'
+PARAMETER_CONCEAL='8'
+PARAMETER_CROSSED_OUT='9'
+PARAMETER_DOUBLE_UNDERLINE='21'
+PARAMETER_OVERLINE='53'
+
+# Define text colors
+FOREGROUND_BLACK='30'
+FOREGROUND_RED='31'
+FOREGROUND_GREEN='32'
+FOREGROUND_YELLOW='33'
+FOREGROUND_BLUE='34'
+FOREGROUND_MAGENTA='35'
+FOREGROUND_CYAN='36'
+FOREGROUND_WHITE='37'
+FOREGROUND_BRIGHT_BLACK='90'
+FOREGROUND_BRIGHT_RED='91'
+FOREGROUND_BRIGHT_GREEN='92'
+FOREGROUND_BRIGHT_YELLOW='93'
+FOREGROUND_BRIGHT_BLUE='94'
+FOREGROUND_BRIGHT_MAGENTA='95'
+FOREGROUND_BRIGHT_CYAN='96'
+FOREGROUND_BRIGHT_WHITE='97'
+FOREGROUND_DEFAULT='39'
+
+# Define background colors
+BACKGROUND_BLACK='40'
+BACKGROUND_RED='41'
+BACKGROUND_GREEN='42'
+BACKGROUND_YELLOW='43'
+BACKGROUND_BLUE='44'
+BACKGROUND_MAGENTA='45'
+BACKGROUND_CYAN='46'
+BACKGROUND_WHITE='47'
+BACKGROUND_BRIGHT_BLACK='100'
+BACKGROUND_BRIGHT_RED='101'
+BACKGROUND_BRIGHT_GREEN='102'
+BACKGROUND_BRIGHT_YELLOW='103'
+BACKGROUND_BRIGHT_BLUE='104'
+BACKGROUND_BRIGHT_MAGENTA='105'
+BACKGROUND_BRIGHT_CYAN='106'
+BACKGROUND_BRIGHT_WHITE='107'
+BACKGROUND_DEFAULT='49'
+
+# Function to generate ANSI escape code
+generate_escape_code() {
+    local attributes=()
+    local foreground_color="${FOREGROUND_DEFAULT}"
+    local background_color="${BACKGROUND_DEFAULT}"
+
+    # Iterate through parameters and build the escape code
+    for param in "$@"; do
+        case $param in
+            reset)
+                echo -n "${ESCAPE_CHARACTER}${RESET}m"
+                exit 0
+                ;;
+            bold)
+                attributes+=("${PARAMETER_BOLD}")
+                ;;
+            faint)
+                attributes+=("${PARAMETER_FAINT}")
+                ;;
+            italic)
+                attributes+=("${PARAMETER_ITALIC}")
+                ;;
+            underline)
+                attributes+=("${PARAMETER_UNDERLINE}")
+                ;;
+            blink)
+                attributes+=("${PARAMETER_BLINK}")
+                ;;
+            fast_blink)
+                attributes+=("${PARAMETER_FAST_BLINK}")
+                ;;
+            reverse)
+                attributes+=("${PARAMETER_REVERSE}")
+                ;;
+            conceal)
+                attributes+=("${PARAMETER_CONCEAL}")
+                ;;
+            crossed_out)
+                attributes+=("${PARAMETER_CROSSED_OUT}")
+                ;;
+            double_underline)
+                attributes+=("${PARAMETER_DOUBLE_UNDERLINE}")
+                ;;
+            overline)
+                attributes+=("${PARAMETER_OVERLINE}")
+                ;;
+            black)
+                foreground_color="${FOREGROUND_BLACK}"
+                ;;
+            red)
+                foreground_color="${FOREGROUND_RED}"
+                ;;
+            green)
+                foreground_color="${FOREGROUND_GREEN}"
+                ;;
+            yellow)
+                foreground_color="${FOREGROUND_YELLOW}"
+                ;;
+            blue)
+                foreground_color="${FOREGROUND_BLUE}"
+                ;;
+            magenta)
+                foreground_color="${FOREGROUND_MAGENTA}"
+                ;;
+            cyan)
+                foreground_color="${FOREGROUND_CYAN}"
+                ;;
+            white)
+                foreground_color="${FOREGROUND_WHITE}"
+                ;;
+            bright_black)
+                foreground_color="${FOREGROUND_BRIGHT_BLACK}"
+                ;;
+            bright_red)
+                foreground_color="${FOREGROUND_BRIGHT_RED}"
+                ;;
+            bright_green)
+                foreground_color="${FOREGROUND_BRIGHT_GREEN}"
+                ;;
+            bright_yellow)
+                foreground_color="${FOREGROUND_BRIGHT_YELLOW}"
+                ;;
+            bright_blue)
+                foreground_color="${FOREGROUND_BRIGHT_BLUE}"
+                ;;
+            bright_magenta)
+                foreground_color="${FOREGROUND_BRIGHT_MAGENTA}"
+                ;;
+            bright_cyan)
+                foreground_color="${FOREGROUND_BRIGHT_CYAN}"
+                ;;
+            bright_white)
+                foreground_color="${FOREGROUND_BRIGHT_WHITE}"
+                ;;
+            default)
+                foreground_color="${FOREGROUND_DEFAULT}"
+                ;;
+            on_black)
+                background_color="${BACKGROUND_BLACK}"
+                ;;
+            on_red)
+                background_color="${BACKGROUND_RED}"
+                ;;
+            on_green)
+                background_color="${BACKGROUND_GREEN}"
+                ;;
+            on_yellow)
+                background_color="${BACKGROUND_YELLOW}"
+                ;;
+            on_blue)
+                background_color="${BACKGROUND_BLUE}"
+                ;;
+            on_magenta)
+                background_color="${BACKGROUND_MAGENTA}"
+                ;;
+            on_cyan)
+                background_color="${BACKGROUND_CYAN}"
+                ;;
+            on_white)
+                background_color="${BACKGROUND_WHITE}"
+                ;;
+            on_bright_black)
+                background_color="${BACKGROUND_BRIGHT_BLACK}"
+                ;;
+            on_bright_red)
+                background_color="${BACKGROUND_BRIGHT_RED}"
+                ;;
+            on_bright_green)
+                background_color="${BACKGROUND_BRIGHT_GREEN}"
+                ;;
+            on_bright_yellow)
+                background_color="${BACKGROUND_BRIGHT_YELLOW}"
+                ;;
+            on_bright_blue)
+                background_color="${BACKGROUND_BRIGHT_BLUE}"
+                ;;
+            on_bright_magenta)
+                background_color="${BACKGROUND_BRIGHT_MAGENTA}"
+                ;;
+            on_bright_cyan)
+                background_color="${BACKGROUND_BRIGHT_CYAN}"
+                ;;
+            on_bright_white)
+                background_color="${BACKGROUND_BRIGHT_WHITE}"
+                ;;
+            on_default)
+                background_color="${BACKGROUND_DEFAULT}"
+                ;;
+        esac
+    done
+
+    # Concatenate the attributes if any
+    local attribute_str=""
+    if [ "${#attributes[@]}" -gt 0 ]; then
+        for attr in "${attributes[@]}"; do
+            attribute_str+=";$attr"
+        done
+    else
+        attribute_str=";"
+    fi
+
+    # Construct the escape code
+    local escape_code="${ESCAPE_CHARACTER}${RESET}${attribute_str};${foreground_color};${background_color}m"
+
+    # Print the escape code
+    echo -n "${escape_code}"
+}
+
+# Check if arguments are provided
+if [ "$#" -eq 0 ]; then
+    echo "Usage: $0 [attributes] [foreground_color] [background_color]"
+    echo "Examples:"
+    echo "$0 reset"
+    echo "$0 blue"
+    echo "$0 bold green"
+    echo "$0 underline red on_white"
+    echo ""
+    echo "Available attributes:"
+    echo "  bold, faint, italic, underline, blink, fast_blink, reverse, conceal, crossed_out, double_underline, overline"
+    echo ""
+    echo "Available foreground colors:"
+    echo "  default"
+    echo "  black, red, green, yellow, blue, magenta, cyan, white"
+    echo "  bright_black, bright_red, bright_green, bright_yellow, bright_blue, bright_magenta, bright_cyan, bright_white"
+    echo ""
+    echo "Available background colors:"
+    echo "  on_default"
+    echo "  on_black, on_red, on_green, on_yellow, on_blue, on_magenta, on_cyan, on_white"
+    echo "  on_bright_black, on_bright_red, on_bright_green, on_bright_yellow, on_bright_blue, on_bright_magenta, on_bright_cyan, on_bright_white"
+    exit 1
+fi
+
+# Generate the ANSI escape code
+escape_code="$(generate_escape_code "$@")"
+
+# Print the escape code
+echo "${escape_code}"
+echo -e "${escape_code}Test string${ESCAPE_CHARACTER}${RESET}m"
