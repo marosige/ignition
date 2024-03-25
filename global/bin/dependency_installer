@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+###############################################################################
+# This script checks for the existence of specified dependencies and installs
+# them if they are not already installed.
+# It supports multiple package managers such as Homebrew (for macOS) and
+# apt-get (for Debian-based Linux distributions).
+#
+# Made by Gergely Marosi - https://github.com/marosige
+###############################################################################
+
+# Function to check if a command exists
+# Parameters:
+#   $1: Command to check for existence
+# Returns:
+#   0 if the command exists, 1 otherwise
+is_command_exists() {
+    command -v "$1" &> /dev/null
+}
+
+# Function to install missing dependencies using package managers like brew or apt-get
+# Parameters:
+#   $1: Dependency to install
+# Returns:
+#   None
+install_dependency() {
+    local dependency=$1
+    # Check if Homebrew is available, if yes, use it to install the dependency
+    if is_command_exists brew; then
+        brew install "$dependency"
+    # If Homebrew is not available, check if apt-get is available, if yes, use it to install the dependency
+    elif is_command_exists apt-get; then
+        apt-get install "$dependency"
+    fi
+}
+
+# Function to ensure Homebrew is installed on macOS
+# Parameters:
+#   None
+# Returns:
+#   None
+install_homebrew() {
+    # Check if the system is macOS and if Homebrew is not installed
+    if [ "$(uname -s)" == "Darwin" ] && ! is_command_exists brew; then
+        # Install Homebrew using the official installation script
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+    fi
+}
+
+# Main function to check and install dependencies
+# Parameters:
+#   $@: List of dependencies to check and install
+# Returns:
+#   None
+has_dependencies() {
+    # Ensure Homebrew is installed on macOS
+    install_homebrew
+    # Loop through each dependency passed as arguments
+    for dependency in "$@"; do
+        # If the dependency is not installed, install it using available package managers
+        if ! is_command_exists "$dependency"; then
+            install_dependency "$dependency"
+        fi
+    done
+}
+
+# Usage
+# Call the has_dependencies function passing the list of dependencies to check and install
+has_dependencies "$@"

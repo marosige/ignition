@@ -1,0 +1,5 @@
+# Ignore Ignition log files
+logs/
+
+# Ignore ignition softlink to bin
+global/bin/ignition
