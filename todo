@@ -1,0 +1,13 @@
+Charles proxy
+• Cert generálás, projekthez adás
+• SSL proxynál *.* felvétele
+
+Atom
+• Helyett Pulsar
+• apm helyett már így ppm
+• ppm install pretty-json
+• ppm install split-diff
+
+Gergo shark script:
+
+adb shell am start -W -a android.intent.action.VIEW -d one-demo:/details/video/item/6283702510001

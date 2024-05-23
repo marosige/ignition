@@ -8,6 +8,8 @@
 source <(curl -s https://raw.githubusercontent.com/marosige/ignition/main/global/libs/print.sh)
 source <(curl -s https://raw.githubusercontent.com/marosige/ignition/main/global/libs/helper.sh)
 
+# Run bootstrap.sh in library mode to set up the enviroment for ignition.
+# If get_ignition.sh has an argument pass it to bootstrap.sh as the base directory
 bootstrap_url="https://raw.githubusercontent.com/marosige/ignition/main/global/scripts/bootstrap.sh"
 if [ $# -gt 0 ]; then
   source <(curl -s "$bootstrap_url") -l -d $1
