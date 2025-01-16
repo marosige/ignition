@@ -1,0 +1,6 @@
+[user]
+    name = Gergely Marosi
+    email = m....@gmail.com
+
+[includeIf "gitdir:~/workspace/accedo/"]
+    path = .gitconfig-work

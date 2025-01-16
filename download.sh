@@ -3,6 +3,7 @@
 ###############################################################################
 # This script downloads ignition for your system
 # Supported systems are macOS and Ubuntu
+#
 # Made by Gergely Marosi - https://github.com/marosige
 ###############################################################################
 

@@ -2,6 +2,10 @@
 
 ###############################################################################
 # This script sets the enviroment to run Ignition
+#   • IG_ROOT - Root directory of Ignition
+#   • IG_OS - OS specific (macos or ubuntu) directory
+#   • Sourcing all the libs from the libs directory
+#   • Sourcing the env.sh file
 #
 # Made by Gergely Marosi - https://github.com/marosige
 ###############################################################################

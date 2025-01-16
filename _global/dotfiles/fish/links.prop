@@ -1,0 +1,10 @@
+$DOTFILES/fish/config.fish=$HOME/.config/fish/config.fish
+$DOTFILES/fish/completions/set_onedark_color.fish=$HOME/.config/fish/completions/set_onedark_color.fish
+$DOTFILES/fish/completions/set_onedark.fish=$HOME/.config/fish/completions/set_onedark.fish
+$DOTFILES/fish/functions/set_onedark_color.fish=$HOME/.config/fish/functions/set_onedark_color.fish
+$DOTFILES/fish/functions/set_onedark.fish=$HOME/.config/fish/functions/set_onedark.fish
+$DOTFILES/fish/conf.d/z.fish=$HOME/.config/fish/conf.d/z.fish
+$DOTFILES/fish/functions/__z_add.fish=$HOME/.config/fish/functions/__z_add.fish
+$DOTFILES/fish/functions/__z_clean.fish=$HOME/.config/fish/functions/__z_clean.fish
+$DOTFILES/fish/functions/__z_complete.fish=$HOME/.config/fish/functions/__z_complete.fish
+$DOTFILES/fish/functions/__z.fish=$HOME/.config/fish/functions/__z.fish

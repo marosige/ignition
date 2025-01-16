@@ -1,0 +1,95 @@
+Android studio:
+Plugins (install plugins poke ball and pokemon loading)
+Theme (onedark)
+Emulators (create avd-s)
+Download android versions to avds
+
+===
+
+yadm - jo lenne hasznalni?
+dotbot - jo lenne hasznalni?
+
+== MAI NAP ==
+
+keyboard:
+  • beallitani a talalt stackoverflow alapjan az en_hu-t
+  • lehet legyen inkabb en-hu a neve
+  • ne mutassuk a keyboard valasztot a menu dockban ha sikerul beallitani
+  • toroljuk az eredeti ABC-t (en-t)
+
+=============
+
+preferences adja be a listaba mit kell ujrainditani
+
+=======
+
+set_fish_shell alapjan visszajelzes - https://github.com/edheltzel/dotfiles/blob/master/fish/setup.sh
+Check all system settings if I miss anything
+automatically opened applications set
+android studio settings
+finder jobb oldali pinnelt folderek
+akku % visszajelző
+slack theme - one dark
+
+turn off click on display to show it
+set screen mirroring visible always on menu bar
+set display resolution to more space
+
+remove magnifing glass from menu bar Spotlight Search
+
+====
+
+root level bin for non macos related stuff
+lsa is not colorised fix it (fish function is good as well)
+maybe fish functions would be better for some stuff (cdf)
+
+====
+
+Van a Uninstall all formulae not listed in the Brewfile:
+  ez legyen: Manage Brewfile
+  kiirja mi az ami nincs benne a brewfileban
+    vagy mindet torlod
+    vagy egyiket se
+    vagy mindet berakod a brewfileba
+    vagy egyesevel opcio
+      torles
+      berakas a brewfileba (legvegere egy # TODO: rakd a helyere leirassal groupba sor, majd a neve)
+  es kiirja mi az ami benne van a brewfileban de nincs installalva
+    vagy mindet installalod
+    vagy egyiket se
+    vagy mindet kiveszed a brewfilebol
+    vagy egyesevel opcio
+      install
+      kivetel a brewfilebol
+  majd a vegen megkerdi ha volt brewfile valtoztatas hogy commitoljam e
+
+==
+ vegignyomkodni a ignition menut mert neha ugral fura neha exitel es nem hivja ujra magat stb
+ Picit pofasitani rajta, ux javitas. Majd ha demozom cegnel
+
+==
+FONTOS:
+ln -s $IGNITION_MAC/ignition.sh $IGNITION_MAC/bin/ignition
+
+csinalni egy bin foldert root levelen azt is bevenni a checkoutba.
+abba legyen sim linkelne az ignition
+abba legyen a weather meg minden nem macos related script
+es ez a bin legyen hozza linkelve a ~/bin-hez, ami pedig PATH
+
+===
+
+auto start:
+• nord layer
+• Clippy
+• Magnet
+• 1Password
+• spotmenu
+• amphetamine
+
+===
+
+default apps (like VLC)
+
+==
+
+ignitnion tool-ba a brewfile difft jol megirni ne csak uninstall all lehessen
