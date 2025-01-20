@@ -20,13 +20,17 @@ running_on_ubuntu() {
   is_command_exists apt-get
 }
 
-# Download destination is $HOME/.ignition
-IGNITION_ROOT="$HOME/.ignition"
+# Set the download destination
+# Default to $HOME/.ignition, but allow overriding with the first parameter
+if [[ -n "$1" ]]; then
+    export IGNITION_ROOT="$1"  # Use the first parameter as the destination
+else
+    export IGNITION_ROOT="$HOME/.ignition"  # Default destination
+fi
 
 # Check if the destination folder already exists
 if [ -d "$IGNITION_ROOT" ]; then
-  echo "Ignition is already downloaded."
-  ## TODO Implement update here
+  echo "Error: Ignition is already downloaded at $IGNITION_ROOT."
   exit 1
 fi
 

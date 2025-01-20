@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  transmission:
+    image: linuxserver/transmission
+    container_name: transmission
+    ports:
+      - 9091:9091
+    volumes:
+      - ./transmission/config:/config
+      - ./transmission/downloads:/downloads
+      - ./transmission/watch:/watch
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=$(cat /etc/timezone)
+    restart: unless-stopped
+
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: jellyfin
+    ports:
+      - 8096:8096
+    volumes:
+      - ./jellyfin/config:/config
+      - ./jellyfin/cache:/cache
+      - ./jellyfin/media:/media
+    environment:
+      - UID=1000
+      - GID=1000
+      - TZ=$(cat /etc/timezone)
+    restart: unless-stopped
+
+  plex:
+    image: plexinc/pms-docker
+    container_name: plex
+    ports:
+      - 32400:32400
+      - 3005:3005
+      - 8324:8324
+      - 32469:32469
+      - 32400:32400/udp
+    volumes:
+      - ./plex/config:/config
+      - ./plex/transcode:/transcode
+      - ./plex/media:/data
+    environment:
+      - PLEX_CLAIM= # Obtain a claim token from https://www.plex.tv/claim
+      - PUID=1000
+      - PGID=1000
+      - TZ=$(cat /etc/timezone)
+    restart: unless-stopped
