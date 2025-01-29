@@ -1,5 +1,0 @@
-$DOTFILES/midnight-commander/config/filehighlight.ini=$HOME/.config/mc/filehighlight.ini
-$DOTFILES/midnight-commander/config/ini=$HOME/.config/mc/ini
-$DOTFILES/midnight-commander/config/panels.ini=$HOME/.config/mc/panels.ini
-$DOTFILES/midnight-commander/skins/onedark16M.ini=$HOME/.local/share/mc/skins/onedark16M.ini
-$DOTFILES/midnight-commander/skins/onedark.ini=$HOME/.local/share/mc/skins/onedark.ini

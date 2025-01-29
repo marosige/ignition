@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+###############################################################################
+# Install Packages
+###############################################################################
+
+echo -e "$IGNITION_TASK Installing Homebrew Applications..."
+
+# Install Homebrew if not installed - brew.sh
+if ! hash brew 2>/dev/null; then
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+
+# Make sure we are using the latest Homebrew
+brew update
+
+# Upgrade existing packages
+brew upgrade
+
+# Install CLI tools & GUI applications
+if [ -f ~/Brewfile ]; then
+  brew bundle --file=~/Brewfile
+else
+  echo -e "$IGNITION_FAIL Brewfile not found in the home directory."
+  exit 1
+fi
+
+# Remove outdated versions from the cellar including casks
+brew cleanup

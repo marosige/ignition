@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+
+# Display help message
+show_help() {
+    echo "Usage: $0 -n <disk_name> [-f -i <disk_id> -s <filesystem>] [-o <owner_name>] [-e <owner_email>] [-p <owner_phone>]"
+    echo ""
+    echo "Options:"
+    echo "  -n    Name of the disk to be set and used for mounting (mandatory)"
+    echo "  -f    Format the disk before adding information (optional)"
+    echo "  -i    ID of the disk to format (e.g., /dev/disk3) (required if formatting)"
+    echo "  -s    Filesystem type to use for formatting (exFAT, FAT32, NTFS) (optional, default: exFAT)"
+    echo "  -o    Name of the owner (optional)"
+    echo "  -e    Email of the owner (optional)"
+    echo "  -p    Phone number of the owner (optional)"
+    echo "  -h    Show this help message"
+    echo ""
+    echo "This script adds information about the disk owner and optionally formats the disk if specified."
+    echo "If formatting is enabled, the disk will be formatted with the chosen filesystem."
+    echo "Creates two files on the disk:"
+    echo "1. 'owner_info.txt' - containing owner information in English."
+    echo "2. 'tulajdonos_adatok.txt' - containing owner information in Hungarian."
+    exit 0
+}
+
+# Variables
+DISK_NAME=""
+FORMAT_DISK=false
+DISK_ID=""
+OWNER_NAME=""
+OWNER_EMAIL=""
+OWNER_PHONE=""
+FILESYSTEM="exFAT"  # Default filesystem
+
+# Parse command-line arguments
+while getopts "n:fi:s:o:e:p:h" opt; do
+    case $opt in
+        n) DISK_NAME="$OPTARG" ;;
+        f) FORMAT_DISK=true ;;
+        i) DISK_ID="$OPTARG" ;;
+        s) FILESYSTEM="$OPTARG" ;;
+        o) OWNER_NAME="$OPTARG" ;;
+        e) OWNER_EMAIL="$OPTARG" ;;
+        p) OWNER_PHONE="$OPTARG" ;;
+        h) show_help ;;
+        *) show_help ;;
+    esac
+done
+
+# Check if the mandatory disk name is provided
+if [ -z "$DISK_NAME" ]; then
+    echo "Error: Disk name is required."
+    show_help
+fi
+
+# Check if formatting is requested and disk ID is provided
+if $FORMAT_DISK && [ -z "$DISK_ID" ]; then
+    echo "Error: Disk ID is required when formatting is enabled."
+    show_help
+fi
+
+# Function to format the disk
+format_disk() {
+    case $FILESYSTEM in
+        exFAT)
+            echo "Formatting disk $DISK_ID to exFAT with name $DISK_NAME..."
+            sudo mkfs.exfat -n "$DISK_NAME" $DISK_ID
+            ;;
+        FAT32)
+            echo "Formatting disk $DISK_ID to FAT32 with name $DISK_NAME..."
+            sudo mkfs.vfat -F 32 -n "$DISK_NAME" $DISK_ID
+            ;;
+        NTFS)
+            echo "Formatting disk $DISK_ID to NTFS with name $DISK_NAME..."
+            sudo mkfs.ntfs -f -L "$DISK_NAME" $DISK_ID
+            ;;
+        *)
+            echo "Error: Unsupported filesystem type. Supported types are exFAT, FAT32, and NTFS."
+            exit 1
+            ;;
+    esac
+
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to format the disk."
+        exit 1
+    fi
+}
+
+# Format the disk if requested
+if $FORMAT_DISK; then
+    format_disk
+fi
+
+# Mount the disk (assuming /mnt/disk_name is the mount point)
+MOUNT_POINT="/mnt/$DISK_NAME"
+sudo mkdir -p $MOUNT_POINT
+sudo mount $DISK_ID $MOUNT_POINT
+
+# Check if the disk was mounted successfully
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to mount the disk."
+    exit 1
+fi
+
+# Create the English owner info file
+OWNER_INFO_FILE="$MOUNT_POINT/owner_info.txt"
+echo "Creating owner_info.txt with available information..."
+echo "Owner Information:" > $OWNER_INFO_FILE
+[ -n "$OWNER_NAME" ] && echo "Name: $OWNER_NAME" >> $OWNER_INFO_FILE
+[ -n "$OWNER_EMAIL" ] && echo "Email: $OWNER_EMAIL" >> $OWNER_INFO_FILE
+[ -n "$OWNER_PHONE" ] && echo "Phone: $OWNER_PHONE" >> $OWNER_INFO_FILE
+echo "Please return this drive to the owner if found." >> $OWNER_INFO_FILE
+
+# Create the Hungarian owner info file
+TULAJDONOS_ADATOK_FILE="$MOUNT_POINT/tulajdonos_adatok.txt"
+echo "Creating tulajdonos_adatok.txt with available information..."
+echo "Tulajdonos adatai:" > $TULAJDONOS_ADATOK_FILE
+[ -n "$OWNER_NAME" ] && echo "Név: $OWNER_NAME" >> $TULAJDONOS_ADATOK_FILE
+[ -n "$OWNER_EMAIL" ] && echo "Email: $OWNER_EMAIL" >> $TULAJDONOS_ADATOK_FILE
+[ -n "$OWNER_PHONE" ] && echo "Telefon: $OWNER_PHONE" >> $TULAJDONOS_ADATOK_FILE
+echo "Kérem, hogy ha megtalálja, juttassa vissza a tulajdonoshoz." >> $TULAJDONOS_ADATOK_FILE
+
+# Unmount the disk
+echo "Unmounting the disk..."
+sudo umount $MOUNT_POINT
+
+# Clean up the mount point
+sudo rmdir $MOUNT_POINT
+
+echo "Disk prepared successfully."

@@ -3,6 +3,7 @@
 ###############################################################################
 # This script downloads ignition for your system
 # Supported systems are macOS and Ubuntu
+# Dependencies: git, homebrew (macOS)
 #
 # Made by Gergely Marosi - https://github.com/marosige
 ###############################################################################
@@ -30,26 +31,19 @@ fi
 
 # Check if the destination folder already exists
 if [ -d "$IGNITION_ROOT" ]; then
-  echo "Error: Ignition is already downloaded at $IGNITION_ROOT."
+  echo "Error: Ignition is already downloaded at $IGNITION_ROOT"
   exit 1
 fi
 
 # Set the os, and check dependencies
 if running_on_macos; then
-  OS="macos"
-  if ! is_command_exists brew ; then /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)" || echo "Failed to install Homebrew on macOS" && exit 1; fi
-  if ! is_command_exists git ; then brew install git || echo "Failed to install Git on macOS" && exit 1; fi
-  if ! is_command_exists gum ; then brew install gum || echo "Failed to install Gum on macOS" && exit 1; fi
+  OS="mac"
+  if ! is_command_exists brew ; then (/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)" || echo "Failed to install Homebrew on macOS" && exit 1); fi
+  if ! is_command_exists git ; then (brew install git || echo "Failed to install Git on macOS" && exit 1); fi
 elif running_on_ubuntu; then
   OS="ubuntu"
   sudo apt-get update
-  if ! is_command_exists git ; then sudo apt-get install -y git || echo "Failed to install Git on Ubuntu" && exit 1; fi
-  if ! is_command_exists gum ; then
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
-    echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
-    sudo apt install || echo "Failed to install Gum on Ubuntu" && exit 1
-  fi
+  if ! is_command_exists git ; then (sudo apt-get install -y git || (echo "Failed to install Git on Ubuntu" && exit 1)); fi
 else
   echo "Unsupported operating system"
   echo "Ignition is available on macOS and Ubuntu"
@@ -59,17 +53,11 @@ fi
 echo "Downloading ignition for $OS into $IGNITION_ROOT"
 git clone --no-checkout https://github.com/marosige/ignition "$IGNITION_ROOT"
 git -C "$IGNITION_ROOT" sparse-checkout init --cone
-git -C "$IGNITION_ROOT" sparse-checkout set _global/ "_$OS/"
+git -C "$IGNITION_ROOT" sparse-checkout set src/ systems/unix/ systems/$OS/
 git -C "$IGNITION_ROOT" checkout main
 
-cd $IGNITION_ROOT
-echo "Ignition downloaded succesfully"
-read -r -p $'Do you want to run it? ' response
-case "$response" in
-    [yY][eE][sS]|[yY])
-        bash ignition.sh
-        ;;
-    *)
-        false
-        ;;
-esac
+echo "Ignition downloaded successfully"
+echo "Press [ENTER] to run it, or Ctrl-c to cancel."
+read
+cd "$IGNITION_ROOT" || exit
+exec bash ignition.sh
