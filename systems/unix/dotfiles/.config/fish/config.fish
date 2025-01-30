@@ -20,19 +20,11 @@ if status is-interactive
   end
 end
 
-# Source enviromental variables
-source ~/.env.sh
+# Configure fuck alias
+thefuck --alias | source
 
-# Aliases
-alias lsa="ls -all"                           # List all files from folder
-alias mkd="mkdir $argv; and cd $argv"         # Create a new directory and enter it
-alias gituser="git config --list | grep user" # Print git user info of current/working directory.
-alias weather="curl wttr.in/~Budapest"        # Check the weather
-thefuck --alias | source                      # Configure fuck alias
-
-# Add my bin folders to the PATH
-set PATH $IGNITION_GLB_BIN $PATH
-set PATH $IGNITION_MAC_BIN $PATH
+# Add my bin folder to the PATH
+set PATH ~/bin $PATH
 
 # Add Android sdk platrofn-tools (adb, etc...) to the PATH
-set PATH ~/Library/Android/sdk//platform-tools/ $ PATH
+set PATH ~/Library/Android/sdk//platform-tools/ $PATH

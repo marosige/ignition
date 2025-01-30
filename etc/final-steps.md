@@ -63,5 +63,3 @@ chrome_open "https://support.8bitdo.com/firmware-updater.html"
 
 
 ```
-
-Todo charles setup

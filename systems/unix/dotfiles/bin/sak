@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+source $IGNITION_TOOL_PRINT
+
+###############################################################################
+# Swiss Army Knife a.k.a. sak
+#
+# todo:
+#  • Batch resize
+###############################################################################
+
+back='<- Back'
+
+handle_back_selected () {
+  if [[ "$choice" == "$back" ]]; then
+    menu
+  fi
+}
+
+select_file () {
+  # Get the current working directory
+  search_dir=$(pwd)
+
+  # Create an array to store file names
+  files=()
+
+  # Populate the array with file names
+  for entry in "$search_dir"/*
+  do
+    if [ -f "$entry" ]; then
+      # Extract file name without path and att it to files
+      files+=("$(basename "$entry")")
+    fi
+  done
+
+  # Add "back" as the last element
+  files+=("$back")
+
+  # Select file and print name
+  gum choose "${files[@]}"
+}
+
+reduce_video_size () {
+  # Select file and get name without extension
+  choice=$(select_file)
+  handle_back_selected $choice
+  choice_without_extension="${choice%.*}"
+
+  ffmpeg -i "$choice" -vcodec libx265 -crf 28 "$choice_without_extension.small.mp4"
+
+  success "Video is resized and saved as $choice_without_extension.small.mp4"
+
+  reduce_video_size
+}
+
+reduce_image_size () {
+  # Read the parameter of max lenght
+  max_side=$1
+
+  # Select file and get name without extension
+  choice=$(select_file)
+  handle_back_selected $choice
+  choice_without_extension="${choice%.*}"
+
+  # Use identify command to get image width and height
+  dimensions=$(identify -format "%wx%h" "$choice")
+
+  # Separate width and height using 'x' as a delimiter
+  IFS='x' read -ra dimensions_array <<< "$dimensions"
+
+  # Extract width and height from the array
+  width="${dimensions_array[0]}"
+  height="${dimensions_array[1]}"
+
+  # Check if the image is wider or taller
+  if [ "$width" -gt "$height" ]; then
+    message "Image is wider than tall. Setting maximum width to $max_side"
+    # Set width
+    convert -resize "$max_side" "$choice" "$choice_without_extension.small.png"
+  elif [ "$width" -lt "$height" ]; then
+    message "Image is taller than wide. Setting maximum height to $max_side"
+    # Set height
+    convert -resize "x$max_side" "$choice" "$choice_without_extension.small.png"
+  else
+    message "Image is square (equal width and height). Setting sides to $max_side"
+    # Set height
+    convert -resize "'$max_side'x$max_side" "$choice" "$choice_without_extension.small.png"
+  fi
+
+  success "Image is resized and saved as $choice_without_extension.small.png"
+
+  reduce_image_size $1
+}
+
+clear_small () {
+  # Get the current working directory
+  folder_path=$(pwd)
+
+  # Use find to locate files matching the pattern and list their names
+  matching_files=$(find "$folder_path" -type f -name "*\.small\.*" -exec basename {} \;)
+
+  # Check if there are matching files
+  if [ -n "$matching_files" ]; then
+    info "This blade will delete all files with .small. in their names:"
+    # Print each line separately
+    while IFS= read -r line; do
+      list "$line"
+    done <<< "$matching_files"
+
+    # Ask for confirmation before removing files
+    if confirm "Are you sure you want to delete all these files?" ; then
+      # Use find again to remove files
+      find "$folder_path" -type f -name "*\.small\.*" -exec rm {} \;
+      success "Files with '.small.' in their names have been removed from $folder_path."
+    else
+      success "No files have been removed."
+    fi
+  else
+    success "No .small. files found in $folder_path."
+  fi
+}
+
+menu () {
+  title "Swiss Army Knife"
+  question "Which blade to open?"
+  options=( "Reduce video size" "Reduce image size" "Delete .small. files" "Exit")
+  choice=$(gum choose "${options[@]}")
+  case "$choice" in
+    "${options[0]}" )
+    reduce_video_size
+    ;;
+    "${options[1]}" )
+    reduce_image_size 1000
+    ;;
+    "${options[2]}" )
+    clear_small
+    ;;
+    "${options[3]}" )
+    success "Exiting"
+    exit 0
+    ;;
+
+  esac
+  menu
+}
+
+menu
