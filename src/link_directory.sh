@@ -8,7 +8,7 @@
 #   2) destination folder: The directory where symbolic links will be created.
 #
 # Usage:
-#   ./link_dotfiles.sh <source-folder> <destination-folder>
+#   ./link_directory.sh <source-folder> <destination-folder>
 #
 # Made by Gergely Marosi - https://github.com/marosige
 ###############################################################################
@@ -27,6 +27,12 @@ echo -e "$IGNITION_TASK Linking files from $SOURCE_DIR to $DEST_DIR"
 # Check if the source directory exists
 if [ ! -d "$SOURCE_DIR" ]; then
     echo -e "${IGNITION_FAIL} Error: Source directory does not exist!"
+    exit 1
+fi
+
+# Check if the destination directory exists
+if [ ! -d "$DEST_DIR" ]; then
+    echo -e "${IGNITION_FAIL} Error: Destination directory does not exist!"
     exit 1
 fi
 
