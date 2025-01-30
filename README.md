@@ -14,7 +14,7 @@ Don’t blindly use my settings unless you know what that entails. Use at your o
 
 To initiate the setup process, run the following command in your terminal:
 
-    bash -c "$(curl -fsSL https://raw.githubusercontent.com/marosige/ignition/main/get_ignition.sh)"
+    bash -c "$(curl -fsSL https://raw.githubusercontent.com/marosige/ignition/main/download.sh)"
 
 #### Acknowledgments
 
