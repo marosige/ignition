@@ -41,29 +41,37 @@ export IGNITION_FAIL="${BRIGHT_RED}[✖]${NC}"
 export IGNITION_INDENT="   "
 
 #### Menu ####
-option_setup="Setup clean system"
+option_install="Install system with Ignition"
 option_exit="Exit"
 
+# TODO when ignition is not installed yet, show only the install option and exit
+# TODO hide the install option when ignition is already installed
 options=(
-  "$option_setup"
+  "$option_install"
   "$option_exit"
 )
 
 echo -e "${BOLD}Ignition Main Menu$NC"
-PS3="Please select an option: " # Prompt for the menu
-select opt in "${options[@]}"; do
-  case $opt in
-    "$option_setup")
-      bash "$IGNITION_ROOT/src/setup.sh"
-      echo -e "$IGNITION_DONE Setting up Ignition completed!"
+
+if command -v gum &> /dev/null; then
+  choice=$(gum choose "${options[@]}")
+else
+  PS3="Please select an option: " # Prompt for the menu
+  select choice in "${options[@]}"; do
+    if [ -n "$choice" ]; then
       break
-      ;;
-    "$option_exit")
-      echo -e "$IGNITION_TASK Exiting..."
-      break
-      ;;
-    *)
+    else
       echo -e "$IGNITION_FAIL Invalid option. Please try again."
-      ;;
-  esac
-done
+    fi
+  done
+fi
+
+case $choice in
+  "$option_install")
+    bash "$IGNITION_ROOT/src/option_install.sh"
+    echo -e "$IGNITION_DONE Setting up Ignition completed!"
+    ;;
+  "$option_exit")
+    echo -e "$IGNITION_TASK Exiting..."
+    ;;
+esac

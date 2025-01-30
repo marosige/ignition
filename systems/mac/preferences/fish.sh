@@ -16,6 +16,6 @@ addIfMissing "/usr/local/bin/fish" || exit=1
 addIfMissing "/opt/homebrew/bin/fish" || exit=1
 
 # Set fish as default shell for the current user
-sudo chsh -s $(which fish) || exit=1
+sudo chsh -s "$(which fish)" || exit=1
 
 exit $exit
