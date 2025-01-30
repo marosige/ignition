@@ -22,6 +22,8 @@ fi
 SOURCE_DIR="$1"
 DEST_DIR="$2"
 
+echo -e "$IGNITION_TASK Linking files from $SOURCE_DIR to $DEST_DIR"
+
 # Check if the source directory exists
 if [ ! -d "$SOURCE_DIR" ]; then
     echo -e "${IGNITION_FAIL} Error: Source directory does not exist!"
