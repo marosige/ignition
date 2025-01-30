@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-echo "Updating Ubuntu system..."
-sudo apt update && sudo apt upgrade -y
-sudo apt autoremove -y
+# Update package list and upgrade all packages
+sudo apt-get update
+sudo apt-get upgrade -y

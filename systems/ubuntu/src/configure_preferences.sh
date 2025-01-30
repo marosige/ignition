@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 
-echo "Configuring SSH..."
+echo -e "$IGNITION_TASK Configuring SSH..."
 sudo systemctl enable ssh
 sudo systemctl start ssh
 
-echo "Configuring system to run with lid closed..."
-LID_CONF="/etc/systemd/logind.conf"
-sudo sed -i '/^#HandleLidSwitch=/s/^#//' "$LID_CONF"
-sudo sed -i '/^HandleLidSwitch=/s/=.*/=ignore/' "$LID_CONF"
-sudo sed -i '/^#HandleLidSwitchDocked=/s/^#//' "$LID_CONF"
-sudo sed -i '/^HandleLidSwitchDocked=/s/=.*/=ignore/' "$LID_CONF"
-sudo systemctl restart systemd-logind
+if grep -q open /proc/acpi/button/lid/*/state; then
+  echo "$IGNITION_TASK Configuring laptop to run with lid closed"
+  sudo sed -i 's/#HandleLidSwitch=suspend/HandleLidSwitch=ignore/' /etc/systemd/logind.conf
+  sudo systemctl restart systemd-logind
+fi
 
-echo "Configuring Docker..."
+echo "$IGNITION_TASK Configuring Docker..."
 sudo systemctl enable docker
+sudo docker-compose -f "$HOME/docker/docker-compose.yml" up -d
+

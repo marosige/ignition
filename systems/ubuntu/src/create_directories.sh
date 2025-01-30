@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 
-echo "Setting up directories..."
-DEPLOY_DIR="$HOME/ignition"
-SCRIPT_DIR=$(dirname "$(realpath "$0")")
-DOCKER_COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
-mkdir -p "$DEPLOY_DIR"
+###############################################################################
+# Directory Structure
+###############################################################################
+
+mkdir ~/bin                                 # For installed scripts
+mkdir ~/tmp                                 # For temporarly files
+mkdir -p ~/docker/transmission/config       # For Transmission configuration
+mkdir -p ~/docker/transmission/downloads    # For Transmission downloads
+mkdir -p ~/docker/jellyfin/config           # For Jellyfin configuration
+mkdir -p ~/docker/jellyfin/media            # For Jellyfin media

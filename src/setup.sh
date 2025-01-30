@@ -19,12 +19,16 @@ setup() {
   TITLE=$1
   SCRIPT=$2
   echo -e "$IGNITION_TASK $TITLE"
-  bash "$IGNITION_UNIX/src/${SCRIPT}.sh"
-  bash "$IGNITION_OS/src/${SCRIPT}.sh"
+  if [ -f "$IGNITION_UNIX/src/${SCRIPT}.sh" ]; then
+    bash "$IGNITION_UNIX/src/${SCRIPT}.sh"
+  fi
+  if [ -f "$IGNITION_OS/src/${SCRIPT}.sh" ]; then
+    bash "$IGNITION_OS/src/${SCRIPT}.sh"
+  fi
 }
 
 setup "Updating system..." update_system
-setup "Installing packages..." install_packages
-setup "Configuring preferences..." configure_preferences
 setup "Creating directories..." create_directories
 setup "Linking files..." link_files
+setup "Installing packages..." install_packages
+setup "Configuring preferences..." configure_preferences
