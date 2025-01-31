@@ -48,7 +48,8 @@ sleep 1
 # Add persistent-apps
 dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
 dockutil --add '/Applications/Google Chrome.app' --no-restart || exit=1
-dockutil --add '/Applications/Spotify.app' --no-restart || exit=1
+dockutil --add '/Applications/ChatGPT.app' --no-restart || exit=1
+dockutil --add "$HOME/Applications/YT Music.app" --no-restart || exit=1
 dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
 dockutil --add '/Applications/Messenger.app' --no-restart || exit=1
 dockutil --add '/System/Applications/Messages.app' --no-restart || exit=1
@@ -61,15 +62,11 @@ dockutil --add '/Applications/1Password.app' --no-restart || exit=1
 dockutil --add '/System/Applications/Utilities/Screenshot.app' --no-restart || exit=1
 dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
 dockutil --add '/Applications/Slack.app' --no-restart || exit=1
-dockutil --add '/Users/'$(id -un)'/Applications/Chrome Apps.localized/Google Meet.app/' --no-restart || exit=1
 dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
-#dockutil --add '/System/Applications/Utilities/Terminal.app' --no-restart || exit=1
-dockutil --add '/Applications/kitty.app' --no-restart || exit=1
+dockutil --add '/System/Applications/Utilities/Terminal.app' --no-restart || exit=1
 dockutil --add '/Applications/Fork.app' --no-restart || exit=1
-dockutil --add '/Applications/Pulsar.app' --no-restart || exit=1
+dockutil --add '/Applications/Visual Studio Code.app' --no-restart || exit=1
 dockutil --add '/Applications/Android Studio.app' --no-restart || exit=1
-dockutil --add '/Applications/Charles.app' --no-restart || exit=1
-dockutil --add '/System/Applications/QuickTime Player.app' --no-restart || exit=1
 dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
 
 # Add persistent-others

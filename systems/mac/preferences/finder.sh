@@ -48,7 +48,7 @@ defaults write com.apple.finder NewWindowTarget -string "PfHm" || exit=1
 ## Setup the sidebar
 user=$(id -un)
 mysides remove all || exit=1
-#mysides add Applications file:///Applications/ || exit=1
+mysides add Applications file:///Applications/ || exit=1
 mysides add "/" file:/// || exit=1
 mysides add "~" file:///Users/$user/ || exit=1
 mysides add workspace file:///Users/$user/workspace/ || exit=1
