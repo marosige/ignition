@@ -70,7 +70,7 @@ dockutil --add '/Applications/Android Studio.app' --no-restart || exit=1
 dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
 
 # Add persistent-others
-dockutil --add '~/Downloads' --view fan --display stack --sort dateadded --no-restart || exit=1
+dockutil --add "$HOME/Downloads" --view fan --display stack --sort dateadded --no-restart || exit=1
 
 # Sleep 1 second, because quickly calling dockutil can cause issues
 sleep 1
