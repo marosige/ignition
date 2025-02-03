@@ -45,32 +45,54 @@ dockutil --remove all --no-restart || exit=1
 # Sleep 1 second, because quickly calling dockutil can cause issues
 sleep 1
 
+# Add things to the dock
+addApp() {
+    local app_path="$1"
+    dockutil --add "$app_path" --no-restart || exit=1
+}
+
+addSpace() {
+    dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
+}
+
+addFolder() {
+    local folder_path="$1"
+    dockutil --add "$folder_path" --view fan --display stack --sort dateadded --no-restart || exit=1
+}
+
 # Add persistent-apps
-dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
-dockutil --add '/Applications/Google Chrome.app' --no-restart || exit=1
-dockutil --add '/Applications/ChatGPT.app' --no-restart || exit=1
-dockutil --add "$HOME/Applications/YT Music.app" --no-restart || exit=1
-dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
-dockutil --add '/Applications/Messenger.app' --no-restart || exit=1
-dockutil --add '/System/Applications/Messages.app' --no-restart || exit=1
-dockutil --add '/Applications/WhatsApp.app' --no-restart || exit=1
-dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
-dockutil --add '/System/Applications/Calendar.app' --no-restart || exit=1
-dockutil --add '/System/Applications/Reminders.app' --no-restart || exit=1
-dockutil --add '/System/Applications/Notes.app' --no-restart || exit=1
-dockutil --add '/Applications/1Password.app' --no-restart || exit=1
-dockutil --add '/System/Applications/Utilities/Screenshot.app' --no-restart || exit=1
-dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
-dockutil --add '/Applications/Slack.app' --no-restart || exit=1
-dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
-dockutil --add '/System/Applications/Utilities/Terminal.app' --no-restart || exit=1
-dockutil --add '/Applications/Fork.app' --no-restart || exit=1
-dockutil --add '/Applications/Visual Studio Code.app' --no-restart || exit=1
-dockutil --add '/Applications/Android Studio.app' --no-restart || exit=1
-dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
+# Section: Finder
+addSpace
+# Section: Web
+addApp "/Applications/Google Chrome.app"
+addApp "/Applications/ChatGPT.app"
+addApp "$HOME/Applications/YT Music.app"
+addSpace
+# Section: Private
+addApp "/Applications/Messenger.app"
+addApp "/System/Applications/Messages.app"
+addApp "/Applications/WhatsApp.app"
+addApp "/Applications/Hue Sync.app"
+addApp "/Applications/Reolink.app"
+addSpace
+# Section: Productivity
+addApp "/System/Applications/Calendar.app"
+addApp "/System/Applications/Reminders.app"
+addApp "/System/Applications/Notes.app"
+addApp "/Applications/1Password.app"
+addApp "/System/Applications/Utilities/Screenshot.app"
+addSpace
+# Section: Development
+addApp "/Applications/Slack.app"
+addApp "/System/Applications/Utilities/Terminal.app"
+addApp "/Applications/Fork.app"
+addApp "/Applications/Visual Studio Code.app"
+addApp "/Applications/Android Studio.app"
+addSpace
+# Section: Non pinned opened apps
 
 # Add persistent-others
-dockutil --add "$HOME/Downloads" --view fan --display stack --sort dateadded --no-restart || exit=1
+addFolder "$HOME/Downloads"
 
 # Sleep 1 second, because quickly calling dockutil can cause issues
 sleep 1

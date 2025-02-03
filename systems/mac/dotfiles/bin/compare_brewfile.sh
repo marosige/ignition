@@ -4,8 +4,11 @@ BREWFILE_PATH="/Users/gergelymarosi/workspace/personal/ignition/systems/mac/dotf
 FETCH_DESCRIPTIONS=false
 
 # Check for --descriptions flag
-if [[ "$1" == "--descriptions" ]]; then
+if [ "$1" == "--descriptions" ]; then
   FETCH_DESCRIPTIONS=true
+  echo -e "Fetching descriptions can take a long time, run it without --descriptions for a fast listing.\n"
+else
+  echo -e "Run with --descriptions to fetch descriptions for formulae and casks.\n"
 fi
 
 # Extract formulae and casks from Brewfile
@@ -19,7 +22,12 @@ installed_casks=($(brew list --casks | tr '[:upper:]' '[:lower:]'))
 # Function to get description of a formula or cask
 get_description() {
   local name=$1
-  brew info "$name" --json=v1 | jq -r '.[0].desc'
+  local cask=$2
+  if [[ "$cask" == "cask" ]]; then
+    brew info --cask "$name" | grep -E '^  ' | head -n 1 | sed 's/^  //'
+  else
+    brew info "$name" --json=v1 | jq -r '.[0].desc'
+  fi
 }
 
 # Find installed formulae not in Brewfile
@@ -27,7 +35,7 @@ echo "Installed formulae not in Brewfile:"
 for formula in "${installed_formulae[@]}"; do
   if [[ ! " ${brewfile_formulae[@]} " =~ " ${formula} " ]]; then
     if $FETCH_DESCRIPTIONS; then
-      description=$(get_description "$formula")
+     description=$(get_description "$formula")
       echo "$formula - $description"
     else
       echo "$formula"
@@ -55,7 +63,7 @@ echo "Installed casks not in Brewfile:"
 for cask in "${installed_casks[@]}"; do
   if [[ ! " ${brewfile_casks[@]} " =~ " ${cask} " ]]; then
     if $FETCH_DESCRIPTIONS; then
-      description=$(get_description "$cask")
+      description=$(get_description "$cask" cask)
       echo "$cask - $description"
     else
       echo "$cask"
@@ -69,10 +77,11 @@ echo "Brewfile casks not installed:"
 for cask in "${brewfile_casks[@]}"; do
   if [[ ! " ${installed_casks[@]} " =~ " ${cask} " ]]; then
     if $FETCH_DESCRIPTIONS; then
-      description=$(get_description "$cask")
+      description=$(get_description "$cask" cask)
       echo "$cask - $description"
     else
       echo "$cask"
     fi
   fi
 done
+

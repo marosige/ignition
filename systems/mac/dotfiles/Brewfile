@@ -1,6 +1,5 @@
 # CLI
 brew "mas"        # Mac App Store command-line interface
-cask "kitty"      # GPU-based terminal emulator
 brew "bash"       # Update Bash to 5.2+ (Apple won't distribute newer versions due to license concerns)
 brew "fish"       # User-friendly command-line shell for UNIX-like operating systems
 brew "midnight-commander"   # midnight-commander Terminal-based visual file manager
@@ -27,7 +26,7 @@ cask "charles"    # Web debugging Proxy application
 brew "lorem"      # Lorem ipsum generator for the console
 
 # Android development
-cask "android-studio" # Tools for building Android applications
+cask "android-studio" # Tools for building Android applications 
 cask "temurin"    # Required for ./gradlew projects - JDK from the Eclipse Foundation
 
 # OTT development
@@ -56,7 +55,7 @@ cask "zoom"       # Video communication and virtual meeting platform
 cask "skype"      # Video chat, voice call and instant messaging application
 
 # Media
-#cask "spotify"    # Music streaming service
+cask "ytmdesktop-youtube-music" # YouTube music client
 cask "vlc"        # Multimedia player
 cask "gimp"       # Free and open-source image editor
 cask "audacity"   # Multi-track audio editor and recorder
@@ -68,6 +67,7 @@ cask "balenaetcher" # Tool to flash OS images to SD cards & USB drives
 cask "monitorcontrol" # Tool to control external monitor brightness & volume
 
 # Utilities
+cask "chatgpt"    # OpenAI's official ChatGPT desktop app
 cask "logi-options-plus"  # Software for Logitech devices
 cask "appcleaner" # Application uninstaller
 cask "ukelele"    # Unicode keyboard layout editor
