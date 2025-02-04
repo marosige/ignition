@@ -2,14 +2,25 @@
 
 BREWFILE_PATH="$HOME/Brewfile"
 FETCH_DESCRIPTIONS=false
+UNINSTALL=false
 
-# Check for --descriptions flag
-if [[ "$1" == "--descriptions" ]]; then
-  FETCH_DESCRIPTIONS=true
-  echo -e "Fetching descriptions can take a long time, run it without --descriptions for a fast listing.\n"
-else
-  echo -e "Run with --descriptions to fetch descriptions for formulae and casks.\n"
-fi
+# Check for --descriptions and --uninstall flags
+for arg in "$@"; do
+  case $arg in
+    --descriptions)
+      FETCH_DESCRIPTIONS=true
+      echo "Fetching descriptions can take a long time, run it without --descriptions for a fast listing."
+      ;;
+    --uninstall)
+      UNINSTALL=true
+      echo "Uninstalling formulae and casks not in Brewfile."
+      ;;
+    *)
+      echo "Run with --descriptions to fetch descriptions for formulae and casks."
+      echo "Run with --uninstall to uninstall formulae and casks not in Brewfile."
+      ;;
+  esac
+done
 
 # Extract formulae and casks from Brewfile
 mapfile -t brewfile_formulae < <(grep -E '^brew "' "$BREWFILE_PATH" | awk -F'"' '{print $2}' | tr '[:upper:]' '[:lower:]')
@@ -24,14 +35,12 @@ declare -A cask_descriptions
 
 # Fetch all installed formulae and cask descriptions in bulk
 if $FETCH_DESCRIPTIONS; then  
-  # Fetch installed formulae descriptions
   while IFS= read -r line; do
     name=$(echo "$line" | jq -r '.name')
     desc=$(echo "$line" | jq -r '.desc // "No description available"')
     formula_descriptions["$name"]="$desc"
   done < <(brew info --json=v2 --installed --formulae | jq -c '.formulae[]')
 
-  # Fetch installed casks descriptions
   while IFS= read -r line; do
     name=$(echo "$line" | jq -r '.name')
     desc=$(echo "$line" | jq -r '.desc // "No description available"')
@@ -39,122 +48,73 @@ if $FETCH_DESCRIPTIONS; then
   done < <(brew info --json=v2 --installed --casks | jq -c '.casks[]')
 fi
 
-# Function to get description from dictionary or fetch missing ones in bulk
 get_description() {
   local name=$1
   local type=$2
 
   if [[ "$type" == "cask" ]]; then
-    [[ -n "${cask_descriptions[$name]}" ]] && echo "${cask_descriptions[$name]}" && return
+    echo "${cask_descriptions[$name]:-No description available}"
   else
-    [[ -n "${formula_descriptions[$name]}" ]] && echo "${formula_descriptions[$name]}" && return
-  fi
-
-  if $FETCH_DESCRIPTIONS; then
-    if [[ "$type" == "cask" ]]; then
-      # Try JSON first
-      desc=$(brew info --json=v2 --cask "$name" 2>/dev/null | jq -r '.casks[0].desc // empty')
-
-      # If JSON fails, extract from plain brew info output
-      if [[ -z "$desc" ]]; then
-        desc=$(brew info "$name" | grep -E "^[[:alnum:]].+:" | head -n 1 | sed 's/^[^:]*: //')
-      fi
-    else
-      # Formula (JSON should work fine)
-      desc=$(brew info --json=v2 "$name" 2>/dev/null | jq -r '.formulae[0].desc // "No description available"')
-    fi
-
-    [[ -z "$desc" ]] && desc="No description available"
-    [[ "$type" == "cask" ]] && cask_descriptions["$name"]="$desc" || formula_descriptions["$name"]="$desc"
-    echo "$desc"
-  else
-    echo "No description available"
+    echo "${formula_descriptions[$name]:-No description available}"
   fi
 }
 
-# Function to check if an item is in an array
 is_in_array() {
   local item=$1
   shift
   for element in "$@"; do
-    if [[ "$element" == "$item" ]]; then
-      return 0
-    fi
+    [[ "$element" == "$item" ]] && return 0
   done
   return 1
 }
 
-# Find installed formulae not in Brewfile
+uninstall_items() {
+  local type=$1
+  shift
+  local installed_items=("$@")
+  local brewfile_items=("${!2}")
+
+  for item in "${installed_items[@]}"; do
+    if ! is_in_array "$item" "${brewfile_items[@]}"; then
+      read -p "Uninstall $type: $item? (y/n) " choice
+      [[ "$choice" == "y" ]] && brew uninstall --"$type" "$item"
+    fi
+  done
+}
+
 echo "Installed formulae not in Brewfile:"
 for formula in "${installed_formulae[@]}"; do
   if ! is_in_array "$formula" "${brewfile_formulae[@]}"; then
-    if $FETCH_DESCRIPTIONS; then
-      echo "$formula - $(get_description "$formula" "formula")"
-    else
-      echo "$formula"
-    fi
+    echo "$formula - $(get_description "$formula" "formula")"
   fi
 done
 echo
 
-# Find Brewfile formulae not installed
 echo "Brewfile formulae not installed:"
-missing_formulae=()
 for formula in "${brewfile_formulae[@]}"; do
   if ! is_in_array "$formula" "${installed_formulae[@]}"; then
-    missing_formulae+=("$formula")
+    echo "$formula - $(get_description "$formula" "formula")"
   fi
-done
-
-# Batch fetch missing formula descriptions
-if $FETCH_DESCRIPTIONS && [[ ${#missing_formulae[@]} -gt 0 ]]; then
-  while IFS= read -r line; do
-    name=$(echo "$line" | jq -r '.name')
-    desc=$(echo "$line" | jq -r '.desc // "No description available"')
-    formula_descriptions["$name"]="$desc"
-  done < <(brew info --json=v2 "${missing_formulae[@]}" 2>/dev/null | jq -c '.formulae[]')
-fi
-
-for formula in "${missing_formulae[@]}"; do
-  echo "$formula - $(get_description "$formula" "formula")"
 done
 echo
 
-# Find installed casks not in Brewfile
 echo "Installed casks not in Brewfile:"
 for cask in "${installed_casks[@]}"; do
   if ! is_in_array "$cask" "${brewfile_casks[@]}"; then
-    if $FETCH_DESCRIPTIONS; then
-      echo "$cask - $(get_description "$cask" "cask")"
-    else
-      echo "$cask"
-    fi
+    echo "$cask - $(get_description "$cask" "cask")"
   fi
 done
 echo
 
-# Find Brewfile casks not installed
 echo "Brewfile casks not installed:"
-missing_casks=()
 for cask in "${brewfile_casks[@]}"; do
   if ! is_in_array "$cask" "${installed_casks[@]}"; then
-    missing_casks+=("$cask")
+    echo "$cask - $(get_description "$cask" "cask")"
   fi
 done
+echo
 
-# Batch fetch missing cask descriptions
-if $FETCH_DESCRIPTIONS && [[ ${#missing_casks[@]} -gt 0 ]]; then
-  while IFS= read -r line; do
-    name=$(echo "$line" | jq -r '.name')
-    desc=$(echo "$line" | jq -r '.desc // "No description available"')
-    cask_descriptions["$name"]="$desc"
-  done < <(brew info --json=v2 --cask "${missing_casks[@]}" 2>/dev/null | jq -c '.casks[]')
+if $UNINSTALL; then
+  uninstall_items "formula" "${installed_formulae[@]}" brewfile_formulae[@]
+  uninstall_items "cask" "${installed_casks[@]}" brewfile_casks[@]
 fi
-
-for cask in "${missing_casks[@]}"; do
-  if $FETCH_DESCRIPTIONS; then
-      echo "$cask - $(get_description "$cask" "cask")"
-    else
-      echo "$cask"
-    fi
-done

@@ -3,6 +3,14 @@
 ###############################################################################
 # Finder
 ###############################################################################
+
+# Ensure mysides is installed
+if ! command -v mysides &> /dev/null
+then
+	echo "$IGNITION_TASK mysides could not be found, installing..."
+	brew install mysides || exit 1
+fi
+
 exit=0
 
 # Set show file extensions
@@ -49,7 +57,7 @@ defaults write com.apple.finder NewWindowTarget -string "PfHm" || exit=1
 user=$(id -un)
 mysides remove all || exit=1
 mysides add Applications file:///Applications/ || exit=1
-mysides add "/" file:/// || exit=1
+#mysides add Root file:///System/Volumes/Data/ || exit=1
 mysides add "~" file:///Users/$user/ || exit=1
 mysides add workspace file:///Users/$user/workspace/ || exit=1
 mysides add tmp file:///Users/$user/tmp/ || exit=1
