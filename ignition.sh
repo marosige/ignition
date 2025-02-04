@@ -9,6 +9,9 @@
 
 #### Bootstrap ####
 
+# Update ignition
+git pull origin main
+
 # Set ignition environment path variables
 IGNITION_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export IGNITION_ROOT

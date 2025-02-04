@@ -7,3 +7,6 @@
 # Call the linkdirectory script on the dotfiles directories
 bash "$IGNITION_ROOT/src/link_directory.sh" "$IGNITION_UNIX/dotfiles" "$HOME"
 bash "$IGNITION_ROOT/src/link_directory.sh" "$IGNITION_OS/dotfiles" "$HOME"
+
+# Link ignition to the bin directory
+ln -sf "$IGNITION_ROOT/ignition.sh" "$HOME/bin/ignition"
