@@ -9,9 +9,6 @@
 
 #### Bootstrap ####
 
-# Update ignition
-git pull origin main
-
 # Set ignition environment path variables
 IGNITION_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export IGNITION_ROOT
@@ -42,6 +39,9 @@ export IGNITION_DONE="${BRIGHT_GREEN}[✔]${NC}"
 export IGNITION_WARN="${YELLOW}[!]${NC}"
 export IGNITION_FAIL="${BRIGHT_RED}[✖]${NC}"
 export IGNITION_INDENT="   "
+
+# Update ignition
+(cd "$IGNITION_ROOT" && git pull origin main)
 
 #### Menu ####
 option_install="Install system with Ignition"
