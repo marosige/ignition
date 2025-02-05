@@ -23,3 +23,10 @@ for app in "${apps[@]}"; do
 done
 
 echo "Auto-start applications launched."
+
+sleep 10
+
+# Close any open Finder windows
+osascript -e 'tell application "Finder" to close every window'
+
+echo "All Finder windows closed."

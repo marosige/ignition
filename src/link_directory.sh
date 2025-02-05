@@ -55,7 +55,7 @@ find "$SOURCE_DIR" -type f | while read -r source_file; do
             # It's a symlink, so remove it and create a new symlink
             rm "$dest_file"
             ln -s "$source_file" "$dest_file"
-            echo -e "${IGNITION_WARN} Overwritten symlink: $dest_file -> $source_file"
+            echo -e "${IGNITION_DONE} Overwritten symlink: $dest_file -> $source_file"
         elif [ -f "$dest_file" ]; then
             # It's a regular file, so do not override and print a message
             echo -e "${IGNITION_FAIL} Skipping: Regular file exists at destination: $dest_file"
