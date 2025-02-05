@@ -41,7 +41,7 @@ export IGNITION_FAIL="${BRIGHT_RED}[✖]${NC}"
 export IGNITION_INDENT="   "
 
 # Update ignition
-(cd "$IGNITION_ROOT" && git pull origin main)
+cd "$IGNITION_ROOT" && git pull --quiet
 
 #### Menu ####
 option_install="Install system with Ignition"
