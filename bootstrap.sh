@@ -26,13 +26,9 @@ export IGNITION_WARN="${YELLOW}[!]${NC}"
 export IGNITION_FAIL="${BRIGHT_RED}[✖]${NC}"
 export IGNITION_INDENT="   "
 
-# Add all executable files in IGNITION_LIB to the PATH
+# Add the IGNITION_LIB directory to the PATH
 if [ -d "$IGNITION_LIB" ]; then
-    for lib in "$IGNITION_LIB"/*; do
-        if [ -f "$lib" ] && [ -x "$lib" ]; then
-            export PATH="$lib:$PATH"
-        fi
-    done
+    export PATH="$IGNITION_LIB:$PATH"
 fi
 
 # small functions for ignition, not big enough to be in a separate lib file
