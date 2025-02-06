@@ -40,6 +40,11 @@ find "$SOURCE_DIR" -mindepth 1 -print0 | while IFS= read -r -d '' src; do
     # Create parent directory if necessary
     mkdir -p "$(dirname "$dest")"
     
+    # Skip directory links
+    if [ -d "$src" ]; then
+        continue
+    fi
+    
     # Check if destination already exists
     if [ -e "$dest" ]; then
         # Check if destination is a symlink
