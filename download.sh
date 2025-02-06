@@ -13,16 +13,14 @@ source <(curl -fsSL "https://raw.githubusercontent.com/marosige/ignition/refs/he
 
 echo -e "$IGNITION_DONE Bootstrap completed"
 
-run_ignition() {
-  ack "run ignition"
-  cd "$IGNITION_ROOT" || exit
-  exec bash ignition.sh
-}
-
-# Check if the destination folder already exists
+# Check if ignition folder already exists
 if [ -d "$IGNITION_ROOT" ]; then
   echo -e "$IGNITION_FAIL Ignition is already downloaded at $IGNITION_ROOT"
-  run_ignition
+  ack "run ignition"
+  cd "$IGNITION_ROOT" || exit 1
+  git pull
+  exec bash ignition.sh
+  exit 0
 fi
 
 # Define the systems to download
@@ -62,4 +60,8 @@ git -C "$IGNITION_ROOT" sparse-checkout set "script/" "lib/" "${SYSTEMS[@]}"
 git -C "$IGNITION_ROOT" checkout main
 
 echo -e "$IGNITION_DONE Ignition downloaded successfully"
-run_ignition
+
+ack "run ignition"
+
+cd "$IGNITION_ROOT" || exit
+exec bash ignition.sh
