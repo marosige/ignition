@@ -49,6 +49,7 @@ case "$(uname)" in
 esac
 
 echo "Downloading ignition for ${SYSTEMS[*]} into $IGNITION_ROOT"
+SYSTEMS=("${SYSTEMS[@]/#/system/}") # Add the system directory prefix
 git clone --no-checkout https://github.com/marosige/ignition "$IGNITION_ROOT"
 git -C "$IGNITION_ROOT" sparse-checkout init --cone
 git -C "$IGNITION_ROOT" sparse-checkout set "script/" "lib/" "${SYSTEMS[@]}"
