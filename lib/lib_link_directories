@@ -13,50 +13,46 @@
 # Made by Gergely Marosi - https://github.com/marosige
 ###############################################################################
 
-# Check if the correct number of arguments is provided
+# Check if two arguments are provided
 if [ "$#" -ne 2 ]; then
-    echo -e "$IGNITION_FAIL Usage: $0 <source-folder> <destination-folder>"
+    echo -e "$IGNITION_FAIL Usage: $0 SOURCE_DIR DEST_DIR"
     exit 1
 fi
 
 SOURCE_DIR="$1"
 DEST_DIR="$2"
 
-echo -e "$IGNITION_TASK Linking files from $SOURCE_DIR to $DEST_DIR"
-
-# Check if the source directory exists
+# Ensure source directory exists
 if [ ! -d "$SOURCE_DIR" ]; then
-    echo -e "$IGNITION_FAIL Error: Source directory does not exist!"
+    echo -e "$IGNITION_FAIL Error: Source directory does not exist."
     exit 1
 fi
 
-# Check if the destination directory exists
-if [ ! -d "$DEST_DIR" ]; then
-    echo -e "$IGNITION_FAIL Error: Destination directory does not exist!"
-    exit 1
-fi
+# Ensure destination directory exists
+mkdir -p "$DEST_DIR"
 
-# Iterate through all files in the source directory, including subdirectories
-find "$SOURCE_DIR" -type f | while read -r source_file; do
-    # Determine the relative path of the source file
-    relative_path="${source_file#"$SOURCE_DIR"/}"
-
-    # Determine the destination file path
-    dest_file="$DEST_DIR/$relative_path"
-
-    # Create the destination folder structure if it doesn't exist
-    dest_folder=$(dirname "$dest_file")
-    mkdir -p "$dest_folder"
-
-    # Remove the existing symlink if it exists, but do not remove regular files
-    if [ -L "$dest_file" ]; then
-        rm -f "$dest_file"
-        echo -e "${IGNITION_WARN} Removed existing symlink: $dest_file"
+# Iterate over files and directories (including dotfiles)
+find "$SOURCE_DIR" -mindepth 1 -print0 | while IFS= read -r -d '' src; do
+    # Determine relative path
+    rel_path="${src#$SOURCE_DIR/}"
+    dest="$DEST_DIR/$rel_path"
+    
+    # Create parent directory if necessary
+    mkdir -p "$(dirname "$dest")"
+    
+    # Check if destination already exists
+    if [ -e "$dest" ]; then
+        # Check if destination is a symlink
+        if [ -L "$dest" ]; then
+            echo -e "$IGNITION_DONE Overwritten symlink: $dest -> $src"
+        else
+            echo -e "$IGNITION_FAIL Existing file: $dest"
+            continue
+        fi
+    else
+        echo -e "$IGNITION_DONE Created symlink: $dest -> $src"
     fi
-
-    # Create a new symlink
-    ln -s "$source_file" "$dest_file"
-    echo -e "${IGNITION_DONE} Created symlink: $dest_file -> $source_file"
+    ln -sfn "$src" "$dest"
 done
 
-echo -e "${IGNITION_DONE} Symlink creation complete!"
+echo -e "$IGNITION_DONE All files have been symlinked."
