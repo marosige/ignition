@@ -2,8 +2,11 @@
 
 echo -e "$IGNITION_TASK Checking for macOS updates..."
 
+# Capture update output
+updates=$(softwareupdate -l 2>&1)
+
 # Check for updates
-if softwareupdate -l | grep -q "No new software available."; then
+if echo "$updates" | grep -q "No new software available."; then
   echo -e "$IGNITION_DONE Your macOS is up to date."
 else
   echo -e "$IGNITION_TASK Updates found. Installing..."

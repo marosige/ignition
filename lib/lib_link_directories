@@ -15,7 +15,7 @@
 
 # Check if the correct number of arguments is provided
 if [ "$#" -ne 2 ]; then
-    echo -e "${IGNITION_FAIL} Usage: $0 <source-folder> <destination-folder>"
+    echo -e "$IGNITION_FAIL Usage: $0 <source-folder> <destination-folder>"
     exit 1
 fi
 
@@ -26,13 +26,13 @@ echo -e "$IGNITION_TASK Linking files from $SOURCE_DIR to $DEST_DIR"
 
 # Check if the source directory exists
 if [ ! -d "$SOURCE_DIR" ]; then
-    echo -e "${IGNITION_FAIL} Error: Source directory does not exist!"
+    echo -e "$IGNITION_FAIL Error: Source directory does not exist!"
     exit 1
 fi
 
 # Check if the destination directory exists
 if [ ! -d "$DEST_DIR" ]; then
-    echo -e "${IGNITION_FAIL} Error: Destination directory does not exist!"
+    echo -e "$IGNITION_FAIL Error: Destination directory does not exist!"
     exit 1
 fi
 
@@ -48,23 +48,15 @@ find "$SOURCE_DIR" -type f | while read -r source_file; do
     dest_folder=$(dirname "$dest_file")
     mkdir -p "$dest_folder"
 
-    # Check if a file already exists at the destination
-    if [ -e "$dest_file" ]; then
-        # Check if it's a symlink
-        if [ -L "$dest_file" ]; then
-            # It's a symlink, so remove it and create a new symlink
-            rm "$dest_file"
-            ln -s "$source_file" "$dest_file"
-            echo -e "${IGNITION_DONE} Overwritten symlink: $dest_file -> $source_file"
-        elif [ -f "$dest_file" ]; then
-            # It's a regular file, so do not override and print a message
-            echo -e "${IGNITION_FAIL} Skipping: Regular file exists at destination: $dest_file"
-        fi
-    else
-        # If the destination file doesn't exist, create a symlink
-        ln -s "$source_file" "$dest_file"
-        echo -e "${IGNITION_DONE} Created symlink: $dest_file -> $source_file"
+    # Remove the existing symlink if it exists, but do not remove regular files
+    if [ -L "$dest_file" ]; then
+        rm -f "$dest_file"
+        echo -e "${IGNITION_WARN} Removed existing symlink: $dest_file"
     fi
+
+    # Create a new symlink
+    ln -s "$source_file" "$dest_file"
+    echo -e "${IGNITION_DONE} Created symlink: $dest_file -> $source_file"
 done
 
 echo -e "${IGNITION_DONE} Symlink creation complete!"

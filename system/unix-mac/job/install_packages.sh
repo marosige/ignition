@@ -18,10 +18,11 @@ brew update
 brew upgrade
 
 # Install CLI tools & GUI applications
-if [ -f ~/Brewfile ]; then
-  brew bundle --file=~/Brewfile
+brewfile="$HOME/Brewfile"
+if [ -f "$brewfile" ]; then
+  brew bundle --file="$brewfile"
 else
-  echo -e "$IGNITION_FAIL Brewfile not found in the home directory."
+  echo -e "$IGNITION_FAIL Brewfile not found in $brewfile"
   exit 1
 fi
 
