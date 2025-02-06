@@ -36,11 +36,11 @@ if [ -d "$IGNITION_LIB" ]; then
 fi
 
 # small functions for ignition, not big enough to be in a separate lib file
-ack() {
+function ack() {
     local action="${1:-continue}"
     read -r -p "Press [ENTER] to $action, or Ctrl-c to cancel."
 }
 
-is_command_exists() {
+function is_command_exists() {
     command -v "$1" >/dev/null 2>&1
 }

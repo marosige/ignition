@@ -5,7 +5,8 @@
 # It is a menu, where the user can select jobs
 ###############################################################################
 
-./~/.ignition/bootstrap.sh
+
+source ~/.ignition/bootstrap.sh
 
 # Update ignition
 PULL_OUTPUT=$(git -C "$IGNITION_ROOT" pull 2>&1)

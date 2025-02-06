@@ -11,9 +11,6 @@ echo "[>] Downloading and running bootstrap"
 # Bootstrap ignition
 source <(curl -fsSL "https://raw.githubusercontent.com/marosige/ignition/refs/heads/main/bootstrap.sh") || { echo "[X] Failed to execute bootstrap script"; exit 1; }
 
-# Now you can proceed with the rest of your script
-echo "Bootstrap script executed successfully!"
-
 echo -e "$IGNITION_SUCCESS Bootstrap completed"
 
 # Check if the destination folder already exists
