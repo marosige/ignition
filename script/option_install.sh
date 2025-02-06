@@ -24,10 +24,11 @@ job() {
 }  
 
 # Loop through each system directory
-for system in "$IGNITION_SYSTEM"/*/; do
-  if [ -d "$system" ]; then
-    export IGNITION_ACTIVE_SYSTEM="$system"
-    echo -e "$IGNITION_TASK Setting up $IGNITION_ACTIVE_SYSTEM"
+for system_path in "$IGNITION_SYSTEM"/*/; do
+  if [ -d "$system_path" ]; then
+    export IGNITION_ACTIVE_SYSTEM="$system_path"
+    system_name=$(basename "$system_path")
+    echo -e "$IGNITION_TASK Setting up $system_name"
     job "Updating system..." update_system
     job "Creating directories..." create_directories
     job "Linking files..." link_files
