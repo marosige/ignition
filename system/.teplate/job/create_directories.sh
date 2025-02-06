@@ -6,4 +6,4 @@
 
 echo -e "$IGNITION_TASK Creating Directories..."
 
-mkdir -p ~/example/directory/structure
+mkdir_withlog -p ~/example/directory/structure  # Description of the directory

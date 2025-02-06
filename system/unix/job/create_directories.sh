@@ -4,5 +4,5 @@
 # Directory Structure
 ###############################################################################
 
-mkdir ~/bin                     # For installed scripts
-mkdir ~/tmp                     # For temporarly files
+mkdir_withlog ~/bin     # For installed scripts
+mkdir_withlog ~/tmp     # For temporarly files

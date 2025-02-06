@@ -43,3 +43,13 @@ is_command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 export -f is_command_exists
+
+mkdir_withlog() {
+  if [ -d "$1" ]; then
+    echo -e "$IGNITION_DONE Directory already exists: $1"
+  else
+    mkdir -p "$1"
+    echo -e "$IGNITION_DONE Created directory: $1"
+  fi
+}
+export -f mkdir_withlog

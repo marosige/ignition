@@ -27,11 +27,13 @@ job() {
 for system_path in "$IGNITION_SYSTEM"/*; do
   if [[ -d "$system_path" ]]; then
     export IGNITION_ACTIVE_SYSTEM="$system_path"
-    echo -e "$IGNITION_TASK Setting up $(basename "$system_path")"
+    system_name=$(basename "$system_path")
+    echo -e "$IGNITION_TASK Setting up $system_name"
     job "Updating system..." update_system
     job "Creating directories..." create_directories
     job "Linking files..." link_files
     job "Installing packages..." install_packages
     job "Configuring preferences..." configure_preferences
+    echo -e "$IGNITION_DONE $system_name setup completed"
   fi
 done
