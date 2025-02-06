@@ -6,9 +6,12 @@
 # Dependencies: git, homebrew (macOS)
 ###############################################################################
 
+echo "[>] Downloading and running bootstrap"
+
 # Bootstrap ignition
-BOOTSTRAP_SCRIPT_URL="https://raw.githubusercontent.com/marosige/ignition/refs/heads/main/bootstrap.sh"
-bash <(curl -fsSL "$BOOTSTRAP_SCRIPT_URL")
+bash <(curl -fsSL "https://raw.githubusercontent.com/marosige/ignition/refs/heads/main/bootstrap.sh")
+
+echo -e "$IGNITION_SUCCESS Bootstrap completed"
 
 # Check if the destination folder already exists
 if [ -d "$IGNITION_ROOT" ]; then
@@ -22,7 +25,7 @@ SYSTEMS=("unix") # Base system
 # Set the os, and check dependencies
 case "$(uname)" in
   Darwin)
-  SYSTEMS+=("unix-mac")
+    SYSTEMS+=("unix-mac")
     if ! is_command_exists brew ; then (/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || echo -e "$IGNITION_FAIL Failed to install Homebrew on macOS" && exit 1); fi
     if ! is_command_exists git ; then (brew install git || echo -e "$IGNITION_FAIL Failed to install Git on macOS" && exit 1); fi
     ;;

@@ -1,3 +1,6 @@
+# Add homebrew bin to PATH
+set -gx PATH /opt/homebrew/bin /usr/local/bin $PATH
+
 # Add ~/bin to PATH
 set PATH ~/bin $PATH
 
