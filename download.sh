@@ -11,7 +11,7 @@ echo "[>] Downloading and running bootstrap"
 # Bootstrap ignition
 source <(curl -fsSL "https://raw.githubusercontent.com/marosige/ignition/refs/heads/main/bootstrap.sh") || { echo "[X] Failed to execute bootstrap script"; exit 1; }
 
-echo -e "$IGNITION_DONE Bootstrap completed"
+echo -e "$IGNITION_DONE Bootstrap configuration completed"
 
 # Check if ignition folder already exists
 if [ -d "$IGNITION_ROOT" ]; then
@@ -52,7 +52,7 @@ case "$(uname)" in
     ;;
 esac
 
-echo "Downloading ignition for ${SYSTEMS[*]} into $IGNITION_ROOT"
+echo -e "$IGNITION_TASK Downloading ignition for ${SYSTEMS[*]} into $IGNITION_ROOT"
 SYSTEMS=("${SYSTEMS[@]/#/system/}") # Add the system directory prefix
 git clone --no-checkout https://github.com/marosige/ignition "$IGNITION_ROOT"
 git -C "$IGNITION_ROOT" sparse-checkout init --cone

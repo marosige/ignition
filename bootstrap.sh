@@ -34,7 +34,8 @@ fi
 # small functions for ignition, not big enough to be in a separate lib file
 ack() {
     local action="${1:-continue}"
-    read -r -p "$IGNITION_WARN Press [ENTER] to $action, or Ctrl-c to cancel."
+    echo -e "$IGNITION_WARN Press [ENTER] to $action, or Ctrl-c to cancel."
+    read -r
 }
 export -f ack
 
