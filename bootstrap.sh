@@ -9,7 +9,7 @@ export IGNITION_ROOT="$HOME/.ignition"
 export IGNITION_LIB="$IGNITION_ROOT/lib"
 export IGNITION_SCRIPT="$IGNITION_ROOT/script"
 export IGNITION_SYSTEM="$IGNITION_ROOT/system"
-export IGNITION_ACTIVE_SYSTEM-"Set this to the active system directory"
+export IGNITION_ACTIVE_SYSTEM="Set this to the active system directory"
 
 # Set log messages
 BOLD='\e[1m'
