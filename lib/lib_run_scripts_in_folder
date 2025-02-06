@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+######################################################################################
+# This script runs all preference scripts for a given system, specified as the first argument.
+# Each script inside the "preferences" directory is executed, except hidden files.
+#
+# Made by Gergely Marosi - https://github.com/marosige
+######################################################################################
+
+SCRIPT_FOLDER=$1
+
+# Check if the provided folder exists
+[ ! -d "$SCRIPT_FOLDER" ] && exit 1
+
+# Find all .sh files in the provided folder, excluding hidden files
+scripts="($(find "$SCRIPT_FOLDER" -name "*.sh" -type f -not -path '*/\.*'))"
+
+# Check if there are any .sh files
+[ ${#scripts[@]} -eq 0 ] && exit 1
+
+# Loop through all .sh files
+for script in "${scripts[@]}"; do
+    bash "$script"
+done

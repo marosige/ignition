@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+###############################################################################
+# This script is the bootstrap script for ignition
+###############################################################################
+
+# Set ignition environment path variables
+export IGNITION_ROOT="$HOME/.ignition"
+export IGNITION_LIB="$IGNITION_ROOT/lib"
+export IGNITION_SCRIPT="$IGNITION_ROOT/script"
+export IGNITION_SYSTEM="$IGNITION_ROOT/system"
+export IGNITION_ACTIVE_SYSTEM-"Set this to the active system directory"
+
+# Set log messages
+BOLD='\e[1m'
+BRIGHT_BLUE='\e[0;94m'
+BRIGHT_GREEN='\e[0;92m'
+YELLOW='\e[0;33m'
+BRIGHT_RED='\e[0;91m'
+NC='\033[0m' # No Color (resets to default)
+
+export IGNITION_TITLE="${BOLD}[#]${NC}"
+export IGNITION_TASK="${BRIGHT_BLUE}[>]${NC}"
+export IGNITION_DONE="${BRIGHT_GREEN}[✔]${NC}"
+export IGNITION_WARN="${YELLOW}[!]${NC}"
+export IGNITION_FAIL="${BRIGHT_RED}[✖]${NC}"
+export IGNITION_INDENT="   "
+
+# Add all executable files in IGNITION_LIB to the PATH
+if [ -d "$IGNITION_LIB" ]; then
+    for lib in "$IGNITION_LIB"/*; do
+        if [ -f "$lib" ] && [ -x "$lib" ]; then
+            export PATH="$lib:$PATH"
+        fi
+    done
+fi
+
+# small functions for ignition, not big enough to be in a separate lib file
+ack() {
+    local action="${1:-continue}"
+    read -r -p "Press [ENTER] to $action, or Ctrl-c to cancel."
+}
+
+is_command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}

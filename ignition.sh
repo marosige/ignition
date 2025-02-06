@@ -3,47 +3,17 @@
 ###############################################################################
 # This script is the entry point of Ignition
 # It is a menu, where the user can select jobs
-#
-# Made by Gergely Marosi - https://github.com/marosige
 ###############################################################################
 
-#### Bootstrap ####
-
-# Set ignition environment path variables
-IGNITION_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export IGNITION_ROOT
-
-export IGNITION_UNIX="$IGNITION_ROOT/systems/unix"
-
-MACOS_DIR="$IGNITION_ROOT/systems/mac"
-UBUNTU_DIR="$IGNITION_ROOT/systems/ubuntu"
-if [ -d "$MACOS_DIR" ]; then
-  export IGNITION_OS=$MACOS_DIR
-elif [ -d "$UBUNTU_DIR" ]; then
-  export IGNITION_OS=$UBUNTU_DIR
-else
-  echo "Error: Can't identify OS." >&2
-  exit 1
-fi
-
-# Set log messages
-BRIGHT_BLUE='\e[0;94m'
-BRIGHT_GREEN='\e[0;92m'
-YELLOW='\e[0;33m'
-BRIGHT_RED='\e[0;91m'
-BOLD='\e[1m'
-NC='\033[0m' # No Color (resets to default)
-
-export IGNITION_TASK="${BRIGHT_BLUE}[>]${NC}"
-export IGNITION_DONE="${BRIGHT_GREEN}[✔]${NC}"
-export IGNITION_WARN="${YELLOW}[!]${NC}"
-export IGNITION_FAIL="${BRIGHT_RED}[✖]${NC}"
-export IGNITION_INDENT="   "
+./~/.ignition/bootstrap.sh
 
 # Update ignition
-cd "$IGNITION_ROOT" && git pull --quiet
+PULL_OUTPUT=$(git -C "$IGNITION_ROOT" pull 2>&1)
+if ! echo "$PULL_OUTPUT" | grep -q "Already up to date."; then
+    echo -e "$IGNITION_DONE Ignition updated!"
+fi
 
-#### Menu ####
+# Show menu
 option_install="Install system with Ignition"
 option_exit="Exit"
 
@@ -54,24 +24,12 @@ options=(
   "$option_exit"
 )
 
-echo -e "${BOLD}Ignition Main Menu$NC"
+echo -e "$IGNITION_TITLE Ignition Main Menu"
+choice=$(lib_menu "${options[@]}")
 
-if command -v gum &> /dev/null; then
-  choice=$(gum choose "${options[@]}")
-else
-  PS3="Please select an option: " # Prompt for the menu
-  select choice in "${options[@]}"; do
-    if [ -n "$choice" ]; then
-      break
-    else
-      echo -e "$IGNITION_FAIL Invalid option. Please try again."
-    fi
-  done
-fi
-
-case $choice in
+case "$choice" in
   "$option_install")
-    bash "$IGNITION_ROOT/src/option_install.sh"
+    bash "$IGNITION_ROOT/script/option_install.sh"
     echo -e "$IGNITION_DONE Setting up Ignition completed!"
     ;;
   "$option_exit")

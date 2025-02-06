@@ -4,60 +4,56 @@
 # This script downloads ignition for your system
 # Supported systems are macOS and Ubuntu
 # Dependencies: git, homebrew (macOS)
-#
-# Made by Gergely Marosi - https://github.com/marosige
 ###############################################################################
 
-is_command_exists() {
-  command -v "$1" >/dev/null 2>&1
-}
-
-running_on_macos() {
-  [ "$(uname)" = "Darwin" ]
-}
-
-# It can be any other OS with apt-get like Debian, but let's assume it's Ubuntu
-running_on_ubuntu() {
-  is_command_exists apt-get
-}
-
-# Set the download destination
-# Default to $HOME/.ignition, but allow overriding with the first parameter
-if [[ -n "$1" ]]; then
-    export IGNITION_ROOT="$1"  # Use the first parameter as the destination
-else
-    export IGNITION_ROOT="$HOME/.ignition"  # Default destination
-fi
+# Bootstrap ignition
+BOOTSTRAP_SCRIPT_URL="https://raw.githubusercontent.com/marosige/ignition/refs/heads/main/bootstrap.sh"
+bash <(curl -fsSL "$BOOTSTRAP_SCRIPT_URL")
 
 # Check if the destination folder already exists
 if [ -d "$IGNITION_ROOT" ]; then
-  echo "Error: Ignition is already downloaded at $IGNITION_ROOT"
+  echo -e "$IGNITION_FAIL Ignition is already downloaded at $IGNITION_ROOT"
   exit 1
 fi
+
+# Define the systems to download
+SYSTEMS=("unix") # Base system
 
 # Set the os, and check dependencies
-if running_on_macos; then
-  OS="mac"
-  if ! is_command_exists brew ; then (/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)" || echo "Failed to install Homebrew on macOS" && exit 1); fi
-  if ! is_command_exists git ; then (brew install git || echo "Failed to install Git on macOS" && exit 1); fi
-elif running_on_ubuntu; then
-  OS="ubuntu"
-  sudo apt-get update
-  if ! is_command_exists git ; then (sudo apt-get install -y git || (echo "Failed to install Git on Ubuntu" && exit 1)); fi
-else
-  echo "Unsupported operating system"
-  echo "Ignition is available on macOS and Ubuntu"
-  exit 1
-fi
+case "$(uname)" in
+  Darwin)
+  SYSTEMS+=("mac")
+    if ! is_command_exists brew ; then (/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || echo -e "$IGNITION_FAIL Failed to install Homebrew on macOS" && exit 1); fi
+    if ! is_command_exists git ; then (brew install git || echo -e "$IGNITION_FAIL Failed to install Git on macOS" && exit 1); fi
+    ;;
+  Linux)
+    if is_command_exists apt-get; then
+      SYSTEMS+=("apt")
+      sudo apt-get update
+      if ! is_command_exists git ; then
+      (sudo apt-get install -y git || (echo -e "$IGNITION_FAIL Failed to install Git on Linux apt" && exit 1))
+      fi
+    else
+      echo -e "$IGNITION_FAIL Unsupported Linux distribution"
+      exit 1
+    fi
+    ;;
+  *)
+    echo -e "$IGNITION_FAIL Unsupported operating system"
+    echo -e "$IGNITION_INDENT Ignition is available on macOS and Ubuntu"
+    exit 1
+    ;;
+esac
 
-echo "Downloading ignition for $OS into $IGNITION_ROOT"
+echo "Downloading ignition for ${SYSTEMS[*]} into $IGNITION_ROOT"
 git clone --no-checkout https://github.com/marosige/ignition "$IGNITION_ROOT"
 git -C "$IGNITION_ROOT" sparse-checkout init --cone
-git -C "$IGNITION_ROOT" sparse-checkout set src/ systems/unix/ systems/$OS/
+git -C "$IGNITION_ROOT" sparse-checkout set "script/" "lib/" "${SYSTEMS[@]}"
 git -C "$IGNITION_ROOT" checkout main
 
-echo "Ignition downloaded successfully"
-echo "Press [ENTER] to run it, or Ctrl-c to cancel."
-read
+echo -e "$IGNITION_DONE Ignition downloaded successfully"
+
+ack "run ignition"
+
 cd "$IGNITION_ROOT" || exit
 exec bash ignition.sh
