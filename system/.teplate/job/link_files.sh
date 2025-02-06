@@ -5,4 +5,4 @@
 ###############################################################################
 
 # Link dotfiles to the home directory
-lib_link_directories "$IGNITION_ACTIVE_SYSTEM/dotfiles/" "$HOME"
+lib_link_directories "$IGNITION_ACTIVE_SYSTEM/dotfiles" "$HOME"
