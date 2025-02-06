@@ -22,13 +22,13 @@ SYSTEMS=("unix") # Base system
 # Set the os, and check dependencies
 case "$(uname)" in
   Darwin)
-  SYSTEMS+=("mac")
+  SYSTEMS+=("unix-mac")
     if ! is_command_exists brew ; then (/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || echo -e "$IGNITION_FAIL Failed to install Homebrew on macOS" && exit 1); fi
     if ! is_command_exists git ; then (brew install git || echo -e "$IGNITION_FAIL Failed to install Git on macOS" && exit 1); fi
     ;;
   Linux)
     if is_command_exists apt-get; then
-      SYSTEMS+=("apt")
+      SYSTEMS+=("unix-apt")
       sudo apt-get update
       if ! is_command_exists git ; then
       (sudo apt-get install -y git || (echo -e "$IGNITION_FAIL Failed to install Git on Linux apt" && exit 1))

@@ -1,3 +1,7 @@
+# Add ~/bin to PATH
+set PATH ~/bin $PATH
+
+# Set One Dark color scheme
 if status is-interactive
     # Set OneDark Color Scheme
     set -l onedark_options '-b'
@@ -13,9 +17,3 @@ if status is-interactive
 
     set_onedark $onedark_options
 end
-
-# Add my bin folder to the PATH
-set PATH ~/bin $PATH
-
-# Add Android sdk platrofn-tools (adb, etc...) to the PATH
-set PATH ~/Library/Android/sdk//platform-tools/ $PATH

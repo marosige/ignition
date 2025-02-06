@@ -4,7 +4,6 @@
 # Directory Structure
 ###############################################################################
 
-mkdir ~/bin                     # For installed scripts
 mkdir ~/workspace               # For my git repos
 mkdir ~/workspace/work          # For my work projects
 mkdir ~/workspace/personal      # For my personal projects
