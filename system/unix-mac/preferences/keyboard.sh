@@ -70,7 +70,7 @@ defaults write NSGlobalDomain InitialKeyRepeat -int 15 || exit=1
 ## Custom keyboard layout setup
 
 # Copy keylayout to /Library/Keyboard Layouts. Linking is not enough.
-sudo ln -sf "$IGNITION_OS/dotfiles/Library/Keyboard Layouts/en_hu.keylayout" "/Library/Keyboard Layouts/en_hu.keylayout"
+sudo cp "$IGNITION_OS/dotfiles/Library/Keyboard Layouts/en_hu.keylayout" "/Library/Keyboard Layouts/en_hu.keylayout"
 
 # Delete the default layouts (US)
 defaults delete com.apple.HIToolbox AppleEnabledInputSources || exit=1
