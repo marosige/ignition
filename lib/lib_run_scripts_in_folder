@@ -7,8 +7,6 @@
 # Made by Gergely Marosi - https://github.com/marosige
 ######################################################################################
 
-echo "Running all preference scripts in the provided folder..."
-
 SCRIPT_FOLDER=$1
 
 # Check if the provided folder exists
@@ -22,5 +20,6 @@ scripts="($(find "$SCRIPT_FOLDER" -name "*.sh" -type f -not -path '*/\.*'))"
 
 # Loop through all .sh files
 for script in "${scripts[@]}"; do
+    echo -e "$IGNITION_TASK Running $script"
     bash "$script"
 done
