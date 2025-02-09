@@ -7,6 +7,8 @@
 # Made by Gergely Marosi - https://github.com/marosige
 ######################################################################################
 
+echo "Running all preference scripts in the provided folder..."
+
 SCRIPT_FOLDER=$1
 
 # Check if the provided folder exists
