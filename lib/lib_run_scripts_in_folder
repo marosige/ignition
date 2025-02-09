@@ -1,25 +1,35 @@
 #!/usr/bin/env bash
 
 ######################################################################################
-# This script runs all preference scripts for a given system, specified as the first argument.
-# Each script inside the "preferences" directory is executed, except hidden files.
+# This script executes all executable .sh files inside the given folder.
+# Usage: ./script.sh /path/to/folder
 #
 # Made by Gergely Marosi - https://github.com/marosige
 ######################################################################################
 
-SCRIPT_FOLDER=$1
+# Ensure a folder is provided
+if [ -z "$1" ]; then
+    echo -e "$IGNITION_FAIL Usage: $0 <folder_path>"
+    exit 1
+fi
+
+SCRIPT_FOLDER="$1"
 
 # Check if the provided folder exists
-[ ! -d "$SCRIPT_FOLDER" ] && exit 1
+if [ ! -d "$SCRIPT_FOLDER" ]; then
+    echo -e "$IGNITION_FAIL Folder '$SCRIPT_FOLDER' does not exist."
+    exit 1
+fi
 
-# Find all .sh files in the provided folder, excluding hidden files
-scripts="($(find "$SCRIPT_FOLDER" -name "*.sh" -type f -not -path '*/\.*'))"
+echo -e "$IGNITION_TASK Running scripts in: $SCRIPT_FOLDER"
 
-# Check if there are any .sh files
-[ ${#scripts[@]} -eq 0 ] && exit 1
-
-# Loop through all .sh files
-for script in "${scripts[@]}"; do
-    echo -e "$IGNITION_TASK Running $script"
-    bash "$script"
+# Find all .sh files and execute only those that have execute permissions
+find "$SCRIPT_FOLDER" -type f -name "*.sh" -print0 | while IFS= read -r -d '' script; do
+    if [ -x "$script" ]; then
+        script_name=$(basename "$script")
+        echo -e "$IGNITION_TASK Executing: $script_name"
+        bash "$script"
+    fi
 done
+
+echo -e "$IGNITION_DONE All scripts executed."
