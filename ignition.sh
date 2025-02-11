@@ -54,27 +54,27 @@ choice=$(lib_menu "${options[@]}")
 
 case "$choice" in
   "$job_install")
-    bash "$IGNITION_ROOT/script/option_install.sh --all"
+    bash "$IGNITION_ROOT/script/run_job.sh --all"
     echo -e "$IGNITION_DONE Setting up Ignition completed!"
     ;;
   "$job_update_system")
-    bash "$IGNITION_ROOT/script/option_install.sh --update-system"
+    bash "$IGNITION_ROOT/script/run_job.sh --update-system"
     echo -e "$IGNITION_DONE Updating system completed!"
     ;;
   "$job_create_directories")
-    bash "$IGNITION_ROOT/script/option_install.sh --create-directories"
+    bash "$IGNITION_ROOT/script/run_job.sh --create-directories"
     echo -e "$IGNITION_DONE Creating directories completed!"
     ;;
   "$job_link_files")
-    bash "$IGNITION_ROOT/script/option_install.sh --link-files"
+    bash "$IGNITION_ROOT/script/run_job.sh --link-files"
     echo -e "$IGNITION_DONE Linking files completed!"
     ;;
   "$job_install_packages")
-    bash "$IGNITION_ROOT/script/option_install.sh --install-packages"
+    bash "$IGNITION_ROOT/script/run_job.sh --install-packages"
     echo -e "$IGNITION_DONE Installing packages completed!"
     ;;
   "$job_configure_preferences")
-    bash "$IGNITION_ROOT/script/option_install.sh --configure-preferences"
+    bash "$IGNITION_ROOT/script/run_job.sh --configure-preferences"
     echo -e "$IGNITION_DONE Configuring preferences completed!"
     ;;
   "$job_exit")
