@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+[ -z "$IGNITION_ROOT" ] && source ~/.ignition/bootstrap.sh
 
 ###############################################################################
 # Displays

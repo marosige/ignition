@@ -5,7 +5,6 @@
 # It is a menu, where the user can select jobs
 ###############################################################################
 
-
 source ~/.ignition/bootstrap.sh
 
 # Update ignition

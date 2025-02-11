@@ -1,3 +1,8 @@
+export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+export HISTFILE=~/.bash_history
+export HISTSIZE=1000
+export SAVEHIST=1000
+
 # Add homebrew bin to PATH
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 

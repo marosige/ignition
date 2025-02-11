@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+[ -z "$IGNITION_ROOT" ] && source ~/.ignition/bootstrap.sh
 
 ######################################################################################
 # This script executes all executable .sh files inside the given folder.
