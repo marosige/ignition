@@ -11,6 +11,8 @@ source ~/.ignition/bootstrap.sh
 PULL_OUTPUT=$(git -C "$IGNITION_ROOT" pull 2>&1)
 if ! echo "$PULL_OUTPUT" | grep -q "Already up to date."; then
     echo -e "$IGNITION_DONE Ignition updated!"
+    bash "$0"
+    exit
 fi
 
 # Show menu
