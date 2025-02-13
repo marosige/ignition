@@ -49,11 +49,14 @@ sleep 1
 # Add things to the dock
 addApp() {
     local app_path="$1"
-    dockutil --add "$app_path" --no-restart || exit=1
+    local app_name=$(basename "$app_path" .app)
+    echo "adding $app_name"
+    dockutil --add "$app_path" --no-restart &> /dev/null || exit=1
 }
 
 addSpace() {
-    dockutil --add '' --type small-spacer --section apps --no-restart || exit=1
+    echo "adding small spacer"
+    dockutil --add '' --type small-spacer --section apps --no-restart &> /dev/null || exit=1
 }
 
 addFolder() {
