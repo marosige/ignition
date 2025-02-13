@@ -35,6 +35,14 @@ EOF
 
 # Set correct permissions
 chmod 644 "$PLIST_PATH"
-launchctl load "$PLIST_PATH"
 
-echo "All auto-start apps removed. Custom script added: $STARTUP_SCRIPT"
+# Unload the LaunchAgent if it is already loaded
+launchctl bootout gui/$(id -u) "$PLIST_PATH" 2>/dev/null
+
+# Load the LaunchAgent
+if ! launchctl bootstrap gui/$(id -u) "$PLIST_PATH"; then
+    echo -e "$IGNITION_FAIL Error: Failed to load LaunchAgent"
+    exit 1
+fi
+
+echo -e "$IGNITION_DONE All auto-start apps removed. Custom script added: $STARTUP_SCRIPT"
