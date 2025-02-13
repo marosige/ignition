@@ -1,5 +1,5 @@
-# Add homebrew bin to PATH
-export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
-
 # Add ~/bin to PATH
 export PATH="$HOME/bin:$PATH"
+
+# Run the .env.sh file if it exists to set up system specific environment variables
+[ -f ~/.env.sh ] && source ~/.env.sh

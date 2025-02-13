@@ -3,8 +3,8 @@ export HISTFILE=~/.bash_history
 export HISTSIZE=1000
 export SAVEHIST=1000
 
-# Add homebrew bin to PATH
-export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
-
 # Add ~/bin to PATH
 export PATH="$HOME/bin:$PATH"
+
+# Run the .env.sh file if it exists to set up system specific environment variables
+[ -f ~/.env.sh ] && source ~/.env.sh

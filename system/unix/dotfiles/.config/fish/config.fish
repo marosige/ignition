@@ -1,8 +1,10 @@
-# Add homebrew bin to PATH
-set -gx PATH /opt/homebrew/bin /usr/local/bin $PATH
-
 # Add ~/bin to PATH
 set PATH ~/bin $PATH
+
+# Run the .env.sh file if it exists to set up system specific environment variables
+if test -f ~/.env.sh
+    source ~/.env.sh
+end
 
 # Set One Dark color scheme
 if status is-interactive
@@ -20,3 +22,6 @@ if status is-interactive
 
     set_onedark $onedark_options
 end
+
+# No Fish Welcome Message
+set --erase fish_greeting

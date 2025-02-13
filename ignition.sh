@@ -15,7 +15,7 @@ if ! echo "$PULL_OUTPUT" | grep -q "Already up to date."; then
     exit
 fi
 
-echo -e "$IGNITION_TITLE Ignition Main Menu"
+echo -e "$IGNITION_WARN Read carefully!"
 echo "$IGNITION_INDENT This script is configuring system settings and preferences."
 echo "$IGNITION_INDENT Please be aware that running this script will modify your system and may affect your existing configurations."
 echo "$IGNITION_INDENT Ensure you have reviewed the script and understand the changes it will make before proceeding: https://github.com/marosige/ignition"
