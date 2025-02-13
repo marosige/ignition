@@ -6,7 +6,7 @@
 ###############################################################################
 
 # Path to the script that will auto-start your apps
-STARTUP_SCRIPT="$HOME/startup.sh"
+STARTUP_SCRIPT="$HOME/.startup.sh"
 PLIST_PATH="$HOME/Library/LaunchAgents/com.custom.autostart.plist"
 
 # Ensure old login items are removed
