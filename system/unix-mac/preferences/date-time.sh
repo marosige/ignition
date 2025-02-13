@@ -7,13 +7,13 @@
 exit=0
 
 # Set the timezone (see `systemsetup -listtimezones` for other values)
-sudo systemsetup -settimezone "Europe/Budapest" > /dev/null || exit=1
+sudo systemsetup -settimezone "Europe/Budapest" || exit=1
 
 # Set date and time automatically
-sudo systemsetup -setusingnetworktime on > /dev/null || exit=1
+sudo systemsetup -setusingnetworktime on || exit=1
 
 # Set time server
-sudo systemsetup -setnetworktimeserver "time.apple.com" > /dev/null || exit=1
+sudo systemsetup -setnetworktimeserver "time.apple.com" || exit=1
 
 # Set time zome automatically using current location
 sudo defaults write /Library/Preferences/com.apple.timezone.auto.plist Active -bool true || exit=1
