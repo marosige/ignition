@@ -12,11 +12,11 @@ export IGNITION_SYSTEM="$IGNITION_ROOT/system"
 export IGNITION_ACTIVE_SYSTEM="Set this to the active system directory"
 
 # Set log messages
-BOLD='\e[1m'
-BRIGHT_BLUE='\e[0;94m'
-BRIGHT_GREEN='\e[0;92m'
-YELLOW='\e[0;33m'
-BRIGHT_RED='\e[0;91m'
+BOLD='\033[1m'
+BRIGHT_BLUE='\033[0;94m'
+BRIGHT_GREEN='\033[0;92m'
+YELLOW='\033[0;33m'
+BRIGHT_RED='\033[0;91m'
 NC='\033[0m' # No Color (resets to default)
 
 export IGNITION_TITLE="${BOLD}[#]${NC}"
