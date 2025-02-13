@@ -29,7 +29,7 @@ find "$SCRIPT_FOLDER" -type f -name "*.sh" -print0 | while IFS= read -r -d '' sc
     if [ -x "$script" ]; then
         script_name=$(basename "$script")
         echo -e "$IGNITION_TASK Executing: $script_name"
-        bash "$script"
+        bash "$script" || echo -e "$IGNITION_FAIL Error executing: $script_name"
     fi
 done
 
