@@ -17,7 +17,8 @@ defaults write com.apple.screensaver askForPasswordDelay -int 0 || exit=1
 defaults write com.apple.LaunchServices LSQuarantine -bool false || exit=1
 
 # Allow applications downloaded from anywhere
-sudo spctl --master-disable || exit=1
+# Starting from macOS 15, sudo spctl --master-disable is no longer supported to disable Gatekeeper.
+#sudo spctl --master-disable || exit=1
 
 # Turn on Firewall
 sudo defaults write /Library/Preferences/com.apple.alf globalstate -int 1 || exit=1
