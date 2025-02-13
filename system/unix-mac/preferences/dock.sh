@@ -50,12 +50,12 @@ sleep 1
 addApp() {
     local app_path="$1"
     local app_name=$(basename "$app_path" .app)
-    echo "adding $app_name"
+    echo "adding [$app_name]"
     dockutil --add "$app_path" --no-restart &> /dev/null || exit=1
 }
 
 addSpace() {
-    echo "adding small spacer"
+    echo "adding [ ]"
     dockutil --add '' --type small-spacer --section apps --no-restart &> /dev/null || exit=1
 }
 
@@ -66,6 +66,7 @@ addFolder() {
 
 # Add persistent-apps
 # Section: Finder
+echo "adding [Finder]"
 addSpace
 # Section: Web
 addApp "/Applications/Google Chrome.app"
