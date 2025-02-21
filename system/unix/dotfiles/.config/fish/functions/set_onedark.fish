@@ -150,7 +150,7 @@ function set_onedark -d "apply onedark colorscheme to your terminal"
 
     else if string match -qr 'linux-*' $TERM
         function __onedark_output_color -a hex i256 i16
-            test $i16 -lt 16; and printf '\e]P%x%s' $i16 $hex
+            test $i16 -lt 16; and printf '\033]P%x%s' $i16 $hex
         end
         function __onedark_output_color_var
             true

@@ -6,7 +6,7 @@
 ###############################################################################
 
 # Define escape character
-ESCAPE_CHARACTER='\e['
+ESCAPE_CHARACTER='\033['
 
 # Define reset code
 RESET='0'

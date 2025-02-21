@@ -36,7 +36,7 @@ for file in "${non_executable_files[@]}"; do
     echo "$file"
 done
 
-read -r -p $'Do you want to continue?\e[0;1m [Y/n] \e[0m' response
+read -r -p $'Do you want to continue?\033[0;1m [Y/n] \033[0m' response
 case "$response" in
   [yY][eE][sS]|[yY])
     # Add execute permissions to non-executable .sh files
