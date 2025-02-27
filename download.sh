@@ -18,7 +18,6 @@ if [ -d "$IGNITION_ROOT" ]; then
   echo -e "$IGNITION_FAIL Ignition is already downloaded at $IGNITION_ROOT"
   ack "run ignition"
   cd "$IGNITION_ROOT" || exit 1
-  git pull
   exec bash ignition.sh
   exit 0
 fi
