@@ -5,7 +5,6 @@
 # Install applications
 ###############################################################################
 
-echo "Installing applications..."
 apps=(
     "fish"            # User-friendly command-line shell for UNIX-like operating systems
     "mc"              # midnight-commander Terminal-based visual file manager
@@ -25,7 +24,7 @@ apps=(
 )
 
 for app in "${apps[@]}"; do
-    echo "Installing $app..."
+    echo -e "$IGNITION_TASK Installing $app..."
     sudo apt install -y "$app"
 done
 
