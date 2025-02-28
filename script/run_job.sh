@@ -57,8 +57,6 @@ job() {
   if [ -f "$JOB" ]; then
     echo -e "$IGNITION_TASK $TITLE"
     bash "$JOB"
-  else 
-    echo -e "$IGNITION_WARN No job for $TITLE at: $JOB"
   fi
 }  
 
