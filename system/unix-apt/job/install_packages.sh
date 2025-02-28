@@ -17,6 +17,7 @@ apps=(
     "curl"            # Command line tool for transferring data
     "btop"            # Resource monitor. C++ version and continuation of bashtop and bpytop
     "neofetch"        # Fast, highly customisable system info script
+    "gum"             # Tool for glamorous shell scripts
     "git"             # Version control system
     "docker.io"       #
     "docker-compose"  #
