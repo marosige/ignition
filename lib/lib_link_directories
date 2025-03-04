@@ -48,22 +48,7 @@ find "$SOURCE_DIR" -mindepth 1 -print0 | while IFS= read -r -d '' src; do
     
     # Check if destination already exists
     if [ -e "$dest" ]; then
-        # Check if destination is a symlink
-        if [ -L "$dest" ]; then
-            echo -e "$IGNITION_DONE Overwritten symlink: $dest -> $src"
-        else
-            echo -e "$IGNITION_FAIL Existing file: $dest"
-            read -p "Overwrite? (y/n) " choice
-            case "$choice" in 
-                y|Y ) 
-                    echo -e "$IGNITION_DONE Overwritten file with symlink: $dest -> $src"
-                    ;;
-                * ) 
-                    echo -e "$IGNITION_DONE Skipped file: $dest"
-                    continue
-                    ;;
-            esac
-        fi
+        echo -e "$IGNITION_DONE Overwritten symlink: $dest -> $src"
     else
         echo -e "$IGNITION_DONE Created symlink: $dest -> $src"
     fi
