@@ -6,11 +6,11 @@
 ###############################################################################
 
 echo "Configuring UFW firewall..."
-ufw allow OpenSSH  # Allow SSH
-ufw allow 9091/tcp  # Transmission Web UI
-ufw allow 51413/tcp  # Transmission torrent port
-ufw allow 51413/udp  # Transmission UDP port
-ufw allow 8096/tcp  # Jellyfin Web UI
-ufw allow 21/tcp  # FTP control port
-ufw allow 20/tcp  # FTP data port
-ufw enable  # Enable UFW
+sudo ufw allow OpenSSH  # Allow SSH
+sudo ufw allow 9091/tcp  # Transmission Web UI
+sudo ufw allow 51413/tcp  # Transmission torrent port
+sudo ufw allow 51413/udp  # Transmission UDP port
+sudo ufw allow 8096/tcp  # Jellyfin Web UI
+sudo ufw allow 21/tcp  # FTP control port
+sudo ufw allow 20/tcp  # FTP data port
+sudo ufw enable  # Enable UFW

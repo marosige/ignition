@@ -6,10 +6,10 @@
 ###############################################################################
 
 echo "Creating FTP user: reolink"
-adduser --disabled-password --gecos "" reolink
+sudo adduser --disabled-password --gecos "" reolink
 
 echo "Set a password for the reolink user:"
-passwd reolink
+sudo passwd reolink
 
 echo "Configuring FTP server..."
 sed -i 's/^#write_enable=YES/write_enable=YES/' /etc/vsftpd.conf
