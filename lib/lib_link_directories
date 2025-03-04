@@ -53,6 +53,16 @@ find "$SOURCE_DIR" -mindepth 1 -print0 | while IFS= read -r -d '' src; do
             echo -e "$IGNITION_DONE Overwritten symlink: $dest -> $src"
         else
             echo -e "$IGNITION_FAIL Existing file: $dest"
+            read -p "Overwrite? (y/n) " choice
+            case "$choice" in 
+                y|Y ) 
+                    echo -e "$IGNITION_DONE Overwritten file with symlink: $dest -> $src"
+                    ;;
+                * ) 
+                    echo -e "$IGNITION_DONE Skipped file: $dest"
+                    continue
+                    ;;
+            esac
             continue
         fi
     else
