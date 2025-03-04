@@ -5,8 +5,9 @@
 # Directory Structure
 ###############################################################################
 
-mkdir_withlog ~/docker                           # For Docker containers
-mkdir_withlog ~/docker/transmission/config       # For Transmission configuration
-mkdir_withlog ~/docker/transmission/downloads    # For Transmission downloads
-mkdir_withlog ~/docker/jellyfin/config           # For Jellyfin configuration
-mkdir_withlog ~/docker/jellyfin/media            # For Jellyfin media
+mkdir_withlog ~/docker                           # For Docker configuration
+mkdir_withlog ~/docker/appdata                   # For Docker containers
+
+# Set permissions
+chmod -R 775 ~/docker
+chown -R $USER:$USER ~/docker

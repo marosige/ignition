@@ -4,12 +4,9 @@
 ###############################################################################
 # Configuring Docker
 ###############################################################################
-exit=0
 
-# This sets something
-sudo systemctl enable docker || exit=1
+echo "Enabling and starting Docker..."
+systemctl enable --now docker
 
-# This sets something
-sudo docker-compose -f "$HOME/docker/docker-compose.yml" up -d || exit=1
-
-exit $exit
+echo "Starting Docker Compose..."
+sudo docker-compose -f "$HOME/docker/docker-compose.yml" up -d

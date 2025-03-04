@@ -1,22 +1,41 @@
-version: '3.7'
+version: '3.9'
 
 services:
   transmission:
-    image: linuxserver/transmission
+    image: lscr.io/linuxserver/transmission:latest
     container_name: transmission
-    ports:
-      - "9091:9091"
-    volumes:
-      - /path/to/transmission/config:/config
-      - /path/to/transmission/downloads:/downloads
     restart: unless-stopped
+    env_file: .env
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - USER=${TRANSMISSION_USER}
+      - PASS=${TRANSMISSION_PASS}
+    ports:
+      - "9091:9091"  # Web UI port
+      - "51413:51413" # Torrent port (TCP)
+      - "51413:51413/udp" # Torrent port (UDP)
+    volumes:
+      - ${APPDATA}/transmission/config:/config
+      - ${DATADIR}/transmission:/downloads
+      - ${DATADIR}/transmission/watch:/watch
 
   jellyfin:
-    image: jellyfin/jellyfin
+    image: jellyfin/jellyfin:latest
     container_name: jellyfin
-    ports:
-      - "8096:8096"
-    volumes:
-      - /path/to/jellyfin/config:/config
-      - /path/to/jellyfin/media:/media
     restart: unless-stopped
+    env_file: .env
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    ports:
+      - "8096:8096" # HTTP Port for Jellyfin
+    devices:
+      - /dev/dri:/dev/dri  # for hardware transcoding
+    volumes:
+      - ${APPDATA}/jellyfin/config:/config
+      - ${APPDATA}/jellyfin/cache:/cache
+      - ${DATADIR}/jellyfin/movies:/media/movies
+      - ${DATADIR}/jellyfin/shows:/media/shows
