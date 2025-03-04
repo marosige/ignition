@@ -16,18 +16,27 @@ apt=(
     "ufw"             # Uncomplicated Firewall
     "vsftpd"          # FTP server
     "ffmpeg"          # Play, record, convert, and stream audio and video
-    "youtube-dl"      # Download YouTube videos from the command-line
     "speedtest-cli"   # Command-line interface for https://speedtest.net bandwidth tests
     "btop"            # Resource monitor. C++ version and continuation of bashtop and bpytop
     "neofetch"        # Fast, highly customisable system info script
-    "gum"             # Tool for glamorous shell scripts
     "git"             # Version control system
     "openssh-server"  # OpenSSH server for remote access
     "docker.io"       # Docker - Official package for Docker from Ubuntu repositories
     "docker-compose"  # Docker Compose - from Ubuntu repositories (not the latest)
+    "snapd"           # Service and command for installing snap packages
+)
+
+snap_packages=(
+    "gum"            # Tool for glamorous shell scripts
+    "youtube-dl"     # Download YouTube videos from the command-line
 )
 
 for app in "${apt[@]}"; do
     echo -e "$IGNITION_TASK apt installing $app..."
     sudo apt install -y "$app"
+done
+
+for snap_pkg in "${snap_packages[@]}"; do
+    echo -e "$IGNITION_TASK Installing Snap package $snap_pkg..."
+    sudo snap install "$snap_pkg"
 done
