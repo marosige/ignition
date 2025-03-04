@@ -5,6 +5,6 @@
 # Update system
 ###############################################################################
 
-echo "Updating system..."
+echo -e "$IGNITION_TASK Updating system..."
 sudo apt update
 sudo apt upgrade -y

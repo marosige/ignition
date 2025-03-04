@@ -5,7 +5,7 @@
 # Configuring FTP for Reolink NVR
 ###############################################################################
 
-echo "$IGNITION_WARN Skipping FTP setup now..."
+echo -e "$IGNITION_WARN Skipping FTP setup now..."
 exit 0
 
 echo -e "$IGNITION_TASK Creating FTP user: reolink"

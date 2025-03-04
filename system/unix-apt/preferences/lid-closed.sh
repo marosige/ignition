@@ -6,7 +6,7 @@
 ###############################################################################
 exit=0
 
-echo "$IGNITION_WARN Skipping lid closed setup now..."
+echo -e "$IGNITION_WARN Skipping lid closed setup now..."
 exit 0
 
 if grep -q open /proc/acpi/button/lid/*/state; then
