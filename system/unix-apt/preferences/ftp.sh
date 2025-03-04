@@ -5,17 +5,20 @@
 # Configuring FTP for Reolink NVR
 ###############################################################################
 
-echo "Creating FTP user: reolink"
+echo "$IGNITION_WARN Skipping FTP setup now..."
+exit 0
+
+echo -e "$IGNITION_TASK Creating FTP user: reolink"
 sudo adduser --disabled-password --gecos "" reolink
 
-echo "Set a password for the reolink user:"
+echo -e "$IGNITION_TASK Set a password for the reolink user:"
 sudo passwd reolink
 
-echo "Configuring FTP server..."
+echo -e "$IGNITION_TASK Configuring FTP server..."
 sed -i 's/^#write_enable=YES/write_enable=YES/' /etc/vsftpd.conf
 sed -i 's/^#local_enable=YES/local_enable=YES/' /etc/vsftpd.conf
 sed -i 's/^#chroot_local_user=YES/chroot_local_user=YES/' /etc/vsftpd.conf
 echo "allow_writeable_chroot=YES" >> /etc/vsftpd.conf
 
-echo "Restarting FTP service..."
+echo -e "$IGNITION_TASK Restarting FTP service..."
 systemctl restart vsftpd
