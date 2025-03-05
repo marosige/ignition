@@ -21,8 +21,9 @@ list_disks() {
         lsblk -n -o NAME,TYPE,MOUNTPOINT,SIZE $DEVICE | awk '
         BEGIN { i = 1 }
         $2 == "part" {
-            name = ($3 == "" ? "Unallocated" : $3);
-            printf("   %d:      %-30s %-10s   %s\n", i++, name, $4, $1);
+            name = ($3 == "" ? "" : $3);
+            indent = (i == 1) ? "|-" : "`-";  # Use `|-` for all except last partition (`-`)
+            printf("   %-2d:     %-32s %-10s %s%s\n", i++, name, $4, indent, $1);
         }'
 
         echo
