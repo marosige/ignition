@@ -20,7 +20,7 @@ while getopts "u" opt; do
 done
 
 # Update ignition
-PULL_OUTPUT=$(git -C "$IGNITION_ROOT" pull 2>&1)
+PULL_OUTPUT=$(git "$IGNITION_ROOT" pull 2>&1)
 if ! echo "$PULL_OUTPUT" | grep -qv "Already up to date."; then
   echo -e "$IGNITION_DONE Ignition updated!"
   if $update; then
@@ -28,9 +28,7 @@ if ! echo "$PULL_OUTPUT" | grep -qv "Already up to date."; then
   else
     exec "$0"
   fi
-fi
-
-if $update; then
+elif $update; then
   echo -e "$IGNITION_DONE Ignition is up to date!"
   exit 0
 fi
