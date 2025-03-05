@@ -30,14 +30,6 @@ list_disks() {
     done
 }
 
-# Main script logic
-if [ "$1" == "list" ]; then
-    list_disks
-else
-    echo "Usage:"
-    echo "  ./sidkutil.sh list      - List all disks"
-fi
-
 # Function to erase and format a disk as exFAT
 erase_disk() {
     DISK=$1
