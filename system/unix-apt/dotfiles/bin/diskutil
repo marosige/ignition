@@ -1,16 +1,32 @@
 #!/usr/bin/env bash
 
 # Function to list all disks
+
 list_disks() {
-    echo "--------------------------------------------------------------------------------"
-    echo "| Device          | Type     | Size      | Mount Point                         |"
-    echo "--------------------------------------------------------------------------------"
-    lsblk -o NAME,TYPE,SIZE,MOUNTPOINT -r | awk '
-    BEGIN { FS=" "; OFS=" | " }
-    NR > 1 {
-        printf("| %-14s | %-8s | %-9s | %-35s |\n", $1, $2, $3, ($4 == "" ? "Unallocated" : $4))
-    }'
-    echo "--------------------------------------------------------------------------------"
+    echo "Listing all available disks and partitions..."
+    echo
+
+    # Get all disks
+    for disk in $(lsblk -d -n -o NAME,TYPE | awk '$2 == "disk" {print $1}'); do
+        DEVICE="/dev/$disk"
+
+        # Get disk size
+        SIZE=$(lsblk -d -n -o SIZE $DEVICE)
+
+        echo "$DEVICE (physical):"
+        echo "   #:                       TYPE NAME                    SIZE       IDENTIFIER"
+        echo "   0:      GUID_partition_scheme                        *$SIZE     $disk"
+
+        # Get partitions for this disk
+        lsblk -n -o NAME,TYPE,MOUNTPOINT,SIZE $DEVICE | awk '
+        BEGIN { i = 1 }
+        $2 == "part" {
+            name = ($3 == "" ? "Unallocated" : $3);
+            printf("   %d:      %-30s %-10s   %s\n", i++, name, $4, $1);
+        }'
+
+        echo
+    done
 }
 
 # Function to erase and format a disk as exFAT
