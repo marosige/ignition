@@ -80,9 +80,9 @@ elif [ "$1" == "erasedisk" ] && [ -n "$2" ] && [ -n "$3" ]; then
     erase_disk "$2" "$3"
 else
     echo "Usage:"
-    echo "  ./sidkutil.sh list                      - List all disks"
-    echo "  ./sidkutil.sh erasedisk <disk> <label>  - Erase and format a disk as exFAT"
+    echo "  diskutil list                      - List all disks"
+    echo "  diskutil erasedisk <disk> <label>  - Erase and format a disk as exFAT"
     echo
     echo "Example:"
-    echo "  ./sidkutil.sh erasedisk /dev/sdb MEDIA"
+    echo "  diskutil erasedisk /dev/sdb MEDIA"
 fi
