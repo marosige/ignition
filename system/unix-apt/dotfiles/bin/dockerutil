@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the path to the docker-compose.yml file
-COMPOSE_FILE="~/docker/docker-compose.yml"
+COMPOSE_FILE="$HOME/docker/docker-compose.yml"
 COMPOSE_CMD="docker-compose -f $COMPOSE_FILE"
 
 # Function to show Docker Compose information
