@@ -75,20 +75,40 @@ diskutil_mount() {
     echo "$disk is now mounted at $mountpoint."
 }
 
+# Function to unmount a disk
+diskutil_unmount() {
+    local mountpoint=$1
+    
+    if [ -z "$mountpoint" ]; then
+        echo "Error: Missing arguments."
+        echo "Usage: diskutil unmount <mountpoint>"
+        echo "Example: diskutil unmount /mnt/mydrive"
+        return 1
+    fi
+    
+    # Unmount the disk
+    echo "Unmounting disk at $mountpoint..."
+    sudo umount $mountpoint
+    
+    echo "Disk at $mountpoint is now unmounted."
+}
+
 # Function to display usage
 display_usage() {
     echo "Usage:"
-    echo "  $0 list                          - List all available disks and partitions."
-    echo "  $0 erasedisk <disk> <filesystem> [label] - Erase and format a disk with the specified filesystem and optional label."
-    echo "  $0 mount <disk> <mountpoint>       - Mount a disk to the specified mount point."
+    echo "  diskutil list                          - List all available disks and partitions."
+    echo "  diskutil erasedisk <disk> <filesystem> [label] - Erase and format a disk with the specified filesystem and optional label."
+    echo "  diskutil mount <disk> <mountpoint>       - Mount a disk to the specified mount point."
+    echo "  diskutil unmount <mountpoint>            - Unmount a disk from the specified mount point."
     echo ""
     echo "Examples:"
-    echo "  $0 list"
-    echo "  $0 erasedisk /dev/sdb ext4 MYDRIVE"
-    echo "  $0 erasedisk /dev/sdb ntfs MYDISK"
-    echo "  $0 erasedisk /dev/sdb exfat USBSTICK"
-    echo "  $0 erasedisk /dev/sdb fat32 FLASHDRIVE"
-    echo "  $0 mount /dev/sdb1 /mnt/mydrive"
+    echo "  diskutil list"
+    echo "  diskutil erasedisk /dev/sdb ext4 MYDRIVE"
+    echo "  diskutil erasedisk /dev/sdb ntfs MYDISK"
+    echo "  diskutil erasedisk /dev/sdb exfat USBSTICK"
+    echo "  diskutil erasedisk /dev/sdb fat32 FLASHDRIVE"
+    echo "  diskutil mount /dev/sdb1 /mnt/mydrive"
+    echo "  diskutil unmount /mnt/mydrive"
     echo ""
     echo "Supported Filesystems for 'erasedisk' command: ext4, ntfs, exfat, fat32"
 }
@@ -103,6 +123,9 @@ case "$1" in
         ;;
     mount)
         diskutil_mount "$2" "$3"
+        ;;
+    unmount)
+        diskutil_unmount "$2"
         ;;
     *)
         display_usage
