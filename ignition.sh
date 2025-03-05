@@ -21,22 +21,20 @@ done
 
 # Update ignition
 PULL_OUTPUT=$(git "$IGNITION_ROOT" pull 2>&1)
-if echo "$PULL_OUTPUT" | grep -q "Aborting"; then
-  echo -e "$IGNITION_WARN Problem with updating Ignition. Commit your local changes or stash them before you update."
-  if $update; then
-    exit 0
-  fi
-elif ! echo "$PULL_OUTPUT" | grep -qv "Already up to date."; then
-  echo -e "$IGNITION_DONE Ignition updated!"
-  if $update; then
-    exit 0
-  else
+case "$PULL_OUTPUT" in
+  *"Aborting"*)
+    echo -e "$IGNITION_WARN Problem with updating Ignition. Commit your local changes or stash them before you update."
+    $update && exit 0
+    ;;
+  *"Already up to date."*)
+    $update && echo -e "$IGNITION_DONE Ignition is up to date!" && exit 0
+    ;;
+  *)
+    echo -e "$IGNITION_DONE Ignition updated!"
+    $update && exit 0
     exec "$0"
-  fi
-elif $update; then
-  echo -e "$IGNITION_DONE Ignition is up to date!"
-  exit 0
-fi
+    ;;
+esac
 
 echo -e "$IGNITION_WARN Read carefully!"
 echo "$IGNITION_INDENT This script is configuring system settings and preferences."
