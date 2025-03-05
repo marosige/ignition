@@ -6,6 +6,25 @@ diskutil_list() {
     lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,LABEL
 }
 
+# Function to show disk usage
+diskutil_usage() {
+    echo "--------------------------------------------"
+    echo "Disk Usage Report - $(date)"
+    echo "--------------------------------------------"
+    echo ""
+
+    # Get disk usage details
+    df -h --output=source,size,used,avail,pcent,target | grep '^/dev/' | while read line
+    do
+        echo "$line"
+    done
+
+    echo ""
+    echo "--------------------------------------------"
+    echo "End of Report"
+    echo "--------------------------------------------"
+}
+
 # Function to erase and format a disk
 diskutil_erasedisk() {
     local disk=$1
@@ -97,12 +116,14 @@ diskutil_unmount() {
 display_usage() {
     echo "Usage:"
     echo "  diskutil list                          - List all available disks and partitions."
+    echo "  diskutil usage                         - Show disk usage report (free, used, total)."
     echo "  diskutil erasedisk <disk> <filesystem> [label] - Erase and format a disk with the specified filesystem and optional label."
     echo "  diskutil mount <disk> <mountpoint>       - Mount a disk to the specified mount point."
     echo "  diskutil unmount <mountpoint>            - Unmount a disk from the specified mount point."
     echo ""
     echo "Examples:"
     echo "  diskutil list"
+    echo "  diskutil usage"
     echo "  diskutil erasedisk /dev/sdb ext4 MYDRIVE"
     echo "  diskutil erasedisk /dev/sdb ntfs MYDISK"
     echo "  diskutil erasedisk /dev/sdb exfat USBSTICK"
@@ -117,6 +138,9 @@ display_usage() {
 case "$1" in
     list)
         diskutil_list
+        ;;
+    usage)
+        diskutil_usage
         ;;
     erasedisk)
         diskutil_erasedisk "$2" "$3" "$4"
