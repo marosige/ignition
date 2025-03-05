@@ -10,6 +10,12 @@ show_info() {
     $COMPOSE_CMD config
 }
 
+# Function to show Docker Compose status (ps)
+show_status() {
+    echo "Showing Docker Compose status..."
+    $COMPOSE_CMD ps
+}
+
 # Function to start Docker Compose in detached mode
 start_compose() {
     echo "Starting Docker Compose in detached mode..."
@@ -24,7 +30,7 @@ stop_compose() {
 
 # Print usage if no arguments are passed
 usage() {
-    echo "Usage: $0 {info|start|stop}"
+    echo "Usage: $0 {info|status|start|stop}"
     exit 1
 }
 
@@ -32,6 +38,9 @@ usage() {
 case "$1" in
     info)
         show_info
+        ;;
+    status)
+        show_status
         ;;
     start)
         start_compose
