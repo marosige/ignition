@@ -1,24 +1,71 @@
 #!/usr/bin/env bash
 
-echo "DISKUTIL: Listing all available disks and partitions"
+# Function to list all disks
+list_disks() {
+    echo "--------------------------------------------------------------------------------"
+    echo "| Device          | Type     | Size      | Mount Point                         |"
+    echo "--------------------------------------------------------------------------------"
+    lsblk -o NAME,TYPE,SIZE,MOUNTPOINT -r | awk '
+    BEGIN { FS=" "; OFS=" | " }
+    NR > 1 {
+        printf("| %-14s | %-8s | %-9s | %-35s |\n", $1, $2, $3, ($4 == "" ? "Unallocated" : $4))
+    }'
+    echo "--------------------------------------------------------------------------------"
+}
 
-echo "--------------------------------------------------------------------------------"
-echo "| Device          | Type     | Size      | Mount Point                         |"
-echo "--------------------------------------------------------------------------------"
+# Function to erase and format a disk as exFAT
+erase_disk() {
+    DISK=$1
+    LABEL=$2
 
-# Use lsblk to get disk and partition information
-lsblk -o NAME,TYPE,SIZE,MOUNTPOINT -r | awk '
-BEGIN { FS=" "; OFS=" | " }
-NR > 1 {
-    printf("| %-14s | %-8s | %-9s | %-35s |\n", $1, $2, $3, ($4 == "" ? "Unallocated" : $4))
-}'
+    # Ensure disk exists
+    if ! lsblk | grep -q "$DISK"; then
+        echo "Error: Disk $DISK not found!"
+        exit 1
+    fi
 
-echo "--------------------------------------------------------------------------------"
+    echo "Warning: Formatting $DISK to exFAT will erase all data!"
+    read -p "Are you sure? (type 'yes' to proceed): " CONFIRM
 
-# Optional: Show detailed partition information using fdisk
-echo -e "\nDetailed partition info:"
-sudo fdisk -l | grep -E "^Disk /dev"
+    if [ "$CONFIRM" != "yes" ]; then
+        echo "Operation cancelled."
+        exit 0
+    fi
 
-# Optional: Show UUIDs and filesystems
-echo -e "\nFilesystem and UUID information:"
-blkid
+    # Unmount any existing partitions
+    echo "Unmounting any partitions on $DISK..."
+    sudo umount ${DISK}* 2>/dev/null
+
+    # Wipe partition table
+    echo "Wiping existing partition table..."
+    sudo wipefs --all $DISK
+    sudo parted -s $DISK mklabel gpt
+
+    # Create a new single partition
+    echo "Creating a new partition..."
+    sudo parted -s $DISK mkpart primary exfat 0% 100%
+
+    # Wait for partition to be recognized
+    sleep 2
+    PARTITION="${DISK}1"
+
+    # Format partition as exFAT
+    echo "Formatting $PARTITION as exFAT..."
+    sudo mkfs.exfat -n "$LABEL" "$PARTITION"
+
+    echo "Format complete! $PARTITION is now exFAT with label '$LABEL'."
+}
+
+# Main script logic
+if [ "$1" == "list" ]; then
+    list_disks
+elif [ "$1" == "erasedisk" ] && [ -n "$2" ] && [ -n "$3" ]; then
+    erase_disk "$2" "$3"
+else
+    echo "Usage:"
+    echo "  ./sidkutil.sh list                      - List all disks"
+    echo "  ./sidkutil.sh erasedisk <disk> <label>  - Erase and format a disk as exFAT"
+    echo
+    echo "Example:"
+    echo "  ./sidkutil.sh erasedisk /dev/sdb MEDIA"
+fi
