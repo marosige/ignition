@@ -20,7 +20,7 @@ while getopts "u" opt; do
 done
 
 # Update ignition
-PULL_OUTPUT=$(git "$IGNITION_ROOT" pull 2>&1)
+PULL_OUTPUT=$(git -C "$IGNITION_ROOT" pull 2>&1)
 case "$PULL_OUTPUT" in
   *"Aborting"*)
     echo -e "$IGNITION_WARN Problem with updating Ignition. Commit your local changes or stash them before you update."
