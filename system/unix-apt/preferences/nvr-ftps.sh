@@ -12,46 +12,46 @@ CERT_DIR="/etc/ssl/private"
 CERT_FILE="$CERT_DIR/vsftpd.pem"
 
 echo "Updating system packages..."
-apt update && apt install -y vsftpd openssl curl
+sudo apt update && sudo apt install -y vsftpd openssl curl
 
 # Create group if it doesn't exist
 if ! getent group "$FTP_GROUP" >/dev/null; then
     echo "Creating group: $FTP_GROUP"
-    groupadd "$FTP_GROUP"
+    sudo groupadd "$FTP_GROUP"
 fi
 
 # Create user if it doesn't exist
 if ! id "$FTP_USER" >/dev/null 2>&1; then
     echo "Creating FTP user: $FTP_USER"
-    useradd -m -d "$FTP_ROOT" -s /usr/sbin/nologin -g "$FTP_GROUP" "$FTP_USER"
-    echo "$FTP_USER:$FTP_PASS" | chpasswd
+    sudo useradd -m -d "$FTP_ROOT" -s /usr/sbin/nologin -g "$FTP_GROUP" "$FTP_USER"
+    echo "$FTP_USER:$FTP_PASS" | sudo chpasswd
 else
     echo "User $FTP_USER already exists, skipping creation."
 fi
 
 # Ensure the FTP directory exists
-mkdir -p "$FTP_ROOT"
-chown -R "$FTP_USER:$FTP_GROUP" "$FTP_ROOT"
-chmod -R 755 "$FTP_ROOT"
+sudo mkdir -p "$FTP_ROOT"
+sudo chown -R "$FTP_USER:$FTP_GROUP" "$FTP_ROOT"
+sudo chmod -R 755 "$FTP_ROOT"
 
 # Generate SSL certificate if not exists
 if [ ! -f "$CERT_FILE" ]; then
     echo "Generating SSL certificate for FTPS..."
-    mkdir -p "$CERT_DIR"
-    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout "$CERT_FILE" -out "$CERT_FILE" \
+    sudo mkdir -p "$CERT_DIR"
+    sudo openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout "$CERT_FILE" -out "$CERT_FILE" \
       -subj "/C=US/ST=State/L=City/O=Organization/OU=Department/CN=ftps-server"
-    chmod 600 "$CERT_FILE"
+    sudo chmod 600 "$CERT_FILE"
 else
     echo "SSL certificate already exists, skipping generation."
 fi
 
 # Ensure vsftpd config directory exists
-mkdir -p "$VSFTPD_CONF_DIR"
+sudo mkdir -p "$VSFTPD_CONF_DIR"
 
 # Copy vsftpd.conf if it does not already exist
 if [ ! -f "$VSFTPD_CONF_FILE" ]; then
     echo "Creating vsftpd.conf..."
-    cat <<EOF > "$VSFTPD_CONF_FILE"
+    cat <<EOF | sudo tee "$VSFTPD_CONF_FILE" > /dev/null
 listen=YES
 listen_ipv6=NO
 anonymous_enable=NO
@@ -66,7 +66,7 @@ ftpd_banner=Welcome to Reolink NVR FTP Server
 chroot_local_user=YES
 allow_writeable_chroot=YES
 
-# SSL settings
+# SSL settings for FTPS
 ssl_enable=YES
 rsa_cert_file=$CERT_FILE
 rsa_private_key_file=$CERT_FILE
@@ -80,7 +80,7 @@ ssl_sslv3=NO
 pasv_enable=YES
 pasv_min_port=40000
 pasv_max_port=50000
-pasv_address=$(curl -s ifconfig.me) # Get external IP for passive mode
+pasv_address=$(curl -s ifconfig.me) # Use external IP address for passive mode
 EOF
 else
     echo "vsftpd.conf already exists, skipping creation."
@@ -89,15 +89,20 @@ fi
 # Ensure vsftpd.conf is placed in the correct location
 if [ ! -f "$VSFTPD_TARGET" ]; then
     echo "Copying vsftpd.conf to $VSFTPD_TARGET..."
-    cp "$VSFTPD_CONF_FILE" "$VSFTPD_TARGET"
+    sudo cp "$VSFTPD_CONF_FILE" "$VSFTPD_TARGET"
 else
     echo "vsftpd.conf already exists in $VSFTPD_TARGET, skipping copy."
 fi
 
 # Restart vsftpd service
 echo "Restarting vsftpd..."
-systemctl restart vsftpd
-systemctl enable vsftpd
+sudo systemctl restart vsftpd
+sudo systemctl enable vsftpd
+
+# Firewall configuration for FTPS
+echo "Configuring firewall to allow FTPS connections..."
+sudo ufw allow 21
+sudo ufw allow 40000:50000/tcp
 
 echo "FTPS server setup complete!"
 echo "Use these credentials in your Reolink camera settings:"
