@@ -31,7 +31,7 @@ fi
 
 # Ensure the FTP directory exists
 mkdir -p "$FTP_ROOT"
-chown -R "$FTP_USER":"$FTP_GROUP" "$FTP_ROOT"
+chown -R "$FTP_USER:$FTP_GROUP" "$FTP_ROOT"
 chmod -R 755 "$FTP_ROOT"
 
 # Generate SSL certificate if not exists
