@@ -23,7 +23,7 @@ done
 if git -C "$IGNITION_ROOT" pull | grep -qv "Already up to date."; then
   echo -e "$IGNITION_DONE Ignition updated!"
   if $update; then
-    exec
+    exit 0
   else
     exec "$0"
   fi
