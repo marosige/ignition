@@ -4,6 +4,12 @@
 COMPOSE_FILE="$HOME/docker/docker-compose.yml"
 COMPOSE_CMD="docker-compose -f $COMPOSE_FILE"
 
+# Function to get local IP address
+get_local_ip() {
+    # Use ip or ifconfig command to get the local IP address
+    ip addr show eth0 | grep -oP 'inet \K[\d.]+'
+}
+
 # Function to show Docker Compose information
 show_info() {
     echo "Showing Docker Compose info..."
@@ -28,9 +34,30 @@ stop_compose() {
     $COMPOSE_CMD down
 }
 
+# Function to show bookmark URLs for services
+show_bookmarks() {
+    echo "Showing Docker Compose service URLs (Bookmarks)..."
+
+    # Get the local IP address
+    local_ip=$(get_local_ip)
+
+    # Parse the docker-compose.yml file to get the services and their port mappings
+    services=$(yq e '.services | keys' $COMPOSE_FILE)
+
+    # Loop through the services and show URLs for each one that has port mappings
+    for service in $(echo "$services" | jq -r '.[]'); do
+        ports=$($COMPOSE_CMD port $service)
+        if [ -n "$ports" ]; then
+            echo "$service: http://$local_ip:$ports"
+        else
+            echo "$service has no ports exposed."
+        fi
+    done
+}
+
 # Print usage if no arguments are passed
 usage() {
-    echo "Usage: $0 {info|status|start|stop}"
+    echo "Usage: $0 {info|status|start|stop|bookmark}"
     exit 1
 }
 
@@ -47,6 +74,9 @@ case "$1" in
         ;;
     stop)
         stop_compose
+        ;;
+    bookmark)
+        show_bookmarks
         ;;
     *)
         usage
