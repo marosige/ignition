@@ -23,6 +23,9 @@ done
 PULL_OUTPUT=$(git "$IGNITION_ROOT" pull 2>&1)
 if echo "$PULL_OUTPUT" | grep -q "Aborting"; then
   echo -e "$IGNITION_WARN Problem with updating Ignition. Commit your local changes or stash them before you update."
+  if $update; then
+    exit 0
+  fi
 elif ! echo "$PULL_OUTPUT" | grep -qv "Already up to date."; then
   echo -e "$IGNITION_DONE Ignition updated!"
   if $update; then
