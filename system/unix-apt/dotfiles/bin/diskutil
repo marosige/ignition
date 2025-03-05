@@ -1,88 +1,40 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-# Function to list all disks
-#!/usr/bin/env bash
-
-list_disks() {
-    echo "Listing all available disks and partitions..."
-    echo
-
-    # Get all disks
-    for disk in $(lsblk -d -n -o NAME,TYPE | awk '$2 == "disk" {print $1}'); do
-        DEVICE="/dev/$disk"
-
-        # Get disk size
-        SIZE=$(lsblk -d -n -o SIZE $DEVICE)
-
-        echo "$DEVICE (physical):"
-        echo "   #:                       TYPE NAME                    SIZE       IDENTIFIER"
-        echo "   0:      GUID_partition_scheme                        *$SIZE     $disk"
-
-        # Get partitions for this disk
-        lsblk -n -o NAME,TYPE,MOUNTPOINT,SIZE $DEVICE | awk '
-        BEGIN { i = 1 }
-        $2 == "part" {
-            name = ($3 == "" ? "Unallocated" : $3);
-            printf("   %d:      %-30s %-10s   %s\n", i++, name, $4, $1);
-        }'
-
-        echo
-    done
+# Function to list available disks
+diskutil_list() {
+    echo "Listing available disks:"
+    lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,LABEL
 }
 
-# Function to erase and format a disk as exFAT
-erase_disk() {
-    DISK=$1
-    LABEL=$2
+# Function to erase and format a disk
+diskutil_erasedisk() {
+    local disk=$1
+    local filesystem=$2
+    local label=$3
+    
+    if [ -z "$disk" ] || [ -z "$filesystem" ]; then
+        echo "Usage: diskutil erasedisk <disk> <filesystem> [label]"
+        echo "Example: diskutil erasedisk /dev/sdb ext4 MYDRIVE"
+        return 1
+    fi
+    
+    echo "Erasing and formatting $disk as $filesystem with label $label..."
+    sudo umount ${disk}* 2>/dev/null
+    sudo wipefs --all --force $disk
+    sudo mkfs -t $filesystem -L "$label" $disk
+    echo "Done. $disk is now formatted as $filesystem with label $label."
+}
 
-    # Ensure disk exists
-    if ! lsblk | grep -q "$DISK"; then
-        echo "Error: Disk $DISK not found!"
+# Main command handling
+case "$1" in
+    list)
+        diskutil_list
+        ;;
+    erasedisk)
+        diskutil_erasedisk "$2" "$3" "$4"
+        ;;
+    *)
+        echo "Usage: $0 {list|erasedisk <disk> <filesystem> [label]}"
         exit 1
-    fi
-
-    echo "Warning: Formatting $DISK to exFAT will erase all data!"
-    read -p "Are you sure? (type 'yes' to proceed): " CONFIRM
-
-    if [ "$CONFIRM" != "yes" ]; then
-        echo "Operation cancelled."
-        exit 0
-    fi
-
-    # Unmount any existing partitions
-    echo "Unmounting any partitions on $DISK..."
-    sudo umount ${DISK}* 2>/dev/null
-
-    # Wipe partition table
-    echo "Wiping existing partition table..."
-    sudo wipefs --all $DISK
-    sudo parted -s $DISK mklabel gpt
-
-    # Create a new single partition
-    echo "Creating a new partition..."
-    sudo parted -s $DISK mkpart primary exfat 0% 100%
-
-    # Wait for partition to be recognized
-    sleep 2
-    PARTITION="${DISK}1"
-
-    # Format partition as exFAT
-    echo "Formatting $PARTITION as exFAT..."
-    sudo mkfs.exfat -n "$LABEL" "$PARTITION"
-
-    echo "Format complete! $PARTITION is now exFAT with label '$LABEL'."
-}
-
-# Main script logic
-if [ "$1" == "list" ]; then
-    list_disks
-elif [ "$1" == "erasedisk" ] && [ -n "$2" ] && [ -n "$3" ]; then
-    erase_disk "$2" "$3"
-else
-    echo "Usage:"
-    echo "  diskutil list                      - List all disks"
-    echo "  diskutil erasedisk <disk> <label>  - Erase and format a disk as exFAT"
-    echo
-    echo "Example:"
-    echo "  diskutil erasedisk /dev/sdb MEDIA"
-fi
+        ;;
+esac
