@@ -22,6 +22,7 @@ NC='\033[0m' # No Color (resets to default)
 export IGNITION_TITLE="${BOLD}[#]${NC}"
 export IGNITION_TASK="${BRIGHT_BLUE}[>]${NC}"
 export IGNITION_DONE="${BRIGHT_GREEN}[✔]${NC}"
+export IGNITION_DONE_ADD="${BRIGHT_GREEN}[+]${NC}"
 export IGNITION_WARN="${YELLOW}[!]${NC}"
 export IGNITION_FAIL="${BRIGHT_RED}[✖]${NC}"
 export IGNITION_INDENT="   "
@@ -49,7 +50,7 @@ mkdir_withlog() {
     echo -e "$IGNITION_DONE Directory already exists: $1"
   else
     mkdir -p "$1"
-    echo -e "$IGNITION_DONE Created directory: $1"
+    echo -e "$IGNITION_DONE_ADD Created directory: $1"
   fi
 }
 export -f mkdir_withlog
