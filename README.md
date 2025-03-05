@@ -22,3 +22,14 @@ To initiate the setup process, run the following command in your terminal:
 - https://github.com/joeyhoer/starter - For the dotfiles installer script
 - https://github.com/mathiasbynens/dotfiles - For something
 - https://github.com/andrew8088/dotfiles - For something
+
+
+I prefer to name my devices using Pokémon names.
+Daily drivers:
+    iPhone : ghastly
+    iPad: haunter
+    MacBook: gengar
+Servers:
+    My really old desktop PC from 2011: arceus
+    My moms old red laptop: charmander
+    My moms old slow laptop: slowpoke

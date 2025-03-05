@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+echo "DISKUTIL: Listing all available disks and partitions"
+
+echo "--------------------------------------------------------------------------------"
+echo "| Device          | Type     | Size      | Mount Point                         |"
+echo "--------------------------------------------------------------------------------"
+
+# Use lsblk to get disk and partition information
+lsblk -o NAME,TYPE,SIZE,MOUNTPOINT -r | awk '
+BEGIN { FS=" "; OFS=" | " }
+NR > 1 {
+    printf("| %-14s | %-8s | %-9s | %-35s |\n", $1, $2, $3, ($4 == "" ? "Unallocated" : $4))
+}'
+
+echo "--------------------------------------------------------------------------------"
+
+# Optional: Show detailed partition information using fdisk
+echo -e "\nDetailed partition info:"
+sudo fdisk -l | grep -E "^Disk /dev"
+
+# Optional: Show UUIDs and filesystems
+echo -e "\nFilesystem and UUID information:"
+blkid
