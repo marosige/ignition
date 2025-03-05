@@ -11,4 +11,4 @@ if ! grep -wq "/usr/bin/fish" /etc/shells; then
 fi
 
 # Set fish as the default shell for the current user
-chsh -s /usr/bin/fish $USER
+sudo chsh -s /usr/bin/fish $USER
