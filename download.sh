@@ -6,17 +6,33 @@
 # Dependencies: git, homebrew (macOS)
 ###############################################################################
 
-echo "[>] Downloading and running bootstrap"
-
-# Bootstrap ignition
-curl -fsSL https://raw.githubusercontent.com/marosige/ignition/main/bootstrap.sh | bash
-
-if [ -z "$IGNITION_ROOT" ]; then
-  echo "[X] Failed to fetch or execute bootstrap script"
-  exit 1
-fi
-
-echo -e "$IGNITION_DONE Bootstrap configuration completed"
+# Bootstrap
+export IGNITION_ROOT="$HOME/.ignition"
+export IGNITION_LIB="$IGNITION_ROOT/lib"
+export IGNITION_SCRIPT="$IGNITION_ROOT/script"
+export IGNITION_SYSTEM="$IGNITION_ROOT/system"
+export IGNITION_ACTIVE_SYSTEM="Set this to the active system directory"
+BOLD='\033[1m'
+BRIGHT_BLUE='\033[0;94m'
+BRIGHT_GREEN='\033[0;92m'
+YELLOW='\033[0;33m'
+BRIGHT_RED='\033[0;91m'
+NC='\033[0m' # No Color (resets to default)
+export IGNITION_TITLE="${BOLD}[#]${NC}"
+export IGNITION_TASK="${BRIGHT_BLUE}[>]${NC}"
+export IGNITION_DONE="${BRIGHT_GREEN}[✔]${NC}"
+export IGNITION_ADD="${BRIGHT_GREEN}[+]${NC}"
+export IGNITION_WARN="${YELLOW}[!]${NC}"
+export IGNITION_FAIL="${BRIGHT_RED}[✖]${NC}"
+export IGNITION_INDENT="   "
+ack() {
+    local action="${1:-continue}"
+    echo -e "$IGNITION_WARN Press [ENTER] to $action, or Ctrl-c to cancel."
+    read -r
+}
+is_command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
 
 # Check if ignition folder already exists
 if [ -d "$IGNITION_ROOT" ]; then
@@ -41,9 +57,7 @@ case "$(uname)" in
     if is_command_exists apt-get; then
       SYSTEMS+=("unix-apt")
       sudo apt-get update
-      if ! is_command_exists git ; then
-      (sudo apt-get install -y git || (echo -e "$IGNITION_FAIL Failed to install Git on Linux apt" && exit 1))
-      fi
+      if ! is_command_exists git ; then (sudo apt-get install -y git || (echo -e "$IGNITION_FAIL Failed to install Git on Linux apt" && exit 1)) fi
     else
       echo -e "$IGNITION_FAIL Unsupported Linux distribution"
       exit 1
