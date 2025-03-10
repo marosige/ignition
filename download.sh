@@ -9,8 +9,12 @@
 echo "[>] Downloading and running bootstrap"
 
 # Bootstrap ignition
-curl -fsSL -v "https://raw.githubusercontent.com/marosige/ignition/refs/heads/main/bootstrap.sh" -o /tmp/bootstrap.sh || { echo "[X] Failed to fetch the script"; exit 1; }
-source /tmp/bootstrap.sh || { echo "[X] Failed to execute bootstrap script"; exit 1; }
+curl -fsSL https://raw.githubusercontent.com/marosige/ignition/main/bootstrap.sh | bash
+
+if [ -z "$IGNITION_ROOT" ]; then
+  echo "[X] Failed to fetch or execute bootstrap script"
+  exit 1
+fi
 
 echo -e "$IGNITION_DONE Bootstrap configuration completed"
 
