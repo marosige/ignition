@@ -24,3 +24,7 @@ if status is-interactive
 end
 
 set -x PATH $HOME/.local/bin $PATH
+
+# Aliases
+alias lsa='ls -all'
+alias mkd='mkdir $argv; and cd $argv'

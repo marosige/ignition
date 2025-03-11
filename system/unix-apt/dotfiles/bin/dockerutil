@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Define the path to the docker-compose.yml file
-COMPOSE_FILE="$HOME/docker/docker-compose.yml"
+DEFAULT_COMPOSE_FILE="$HOME/docker/docker-compose.yml"
+COMPOSE_FILE="${2:-$DEFAULT_COMPOSE_FILE}"
 COMPOSE_CMD="docker-compose -f $COMPOSE_FILE"
 
 # Function to get local IP address
