@@ -60,8 +60,8 @@ job() {
   fi
 }  
 
-# Loop through each system directory
-for system_path in "$IGNITION_SYSTEM"/*; do
+runJobs() {
+  system_path=$1
   if [[ -d "$system_path" ]]; then
     export IGNITION_ACTIVE_SYSTEM="$system_path"
     system_name=$(basename "$system_path")
@@ -72,5 +72,18 @@ for system_path in "$IGNITION_SYSTEM"/*; do
     $RUN_INSTALL_PACKAGES && job "Installing packages..." install_packages
     $RUN_CONFIGURE_PREFERENCES && job "Configuring preferences..." configure_preferences
     echo -e "$IGNITION_DONE $system_name setup completed"
+  fi
+}
+
+# Loop through each system directory
+for system_path in "$IGNITION_SYSTEM"/*; do
+  runJobs "$system_path"
+done
+
+# Loop through each private system directory (stored in a separate repository)
+for system_path in "$IGNITION_SYSTEM_PRIVATE"/*; do
+  # Skip hidden folders (especially .git)
+  if [[ -d "$system_path" && "$(basename "$system_path")" != .* ]]; then
+    runJobs "$system_path"
   fi
 done

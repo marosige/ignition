@@ -9,6 +9,7 @@ export IGNITION_ROOT="$HOME/.ignition"
 export IGNITION_LIB="$IGNITION_ROOT/lib"
 export IGNITION_SCRIPT="$IGNITION_ROOT/script"
 export IGNITION_SYSTEM="$IGNITION_ROOT/system"
+export IGNITION_SYSTEM_PRIVATE="$IGNITION_ROOT/system-private"  # For private system configurations stored in a separate repository
 export IGNITION_ACTIVE_SYSTEM="Set this to the active system directory"
 
 # Set log messages
