@@ -57,7 +57,7 @@ cask "zoom"       # Video communication and virtual meeting platform
 cask "skype"      # Video chat, voice call and instant messaging application
 
 # Media
-cask "ytmdesktop-youtube-music" # YouTube music client
+cask "yt-music"   # YouTube music client
 cask "vlc"        # Multimedia player
 cask "gimp"       # Free and open-source image editor
 cask "audacity"   # Multi-track audio editor and recorder
@@ -87,7 +87,3 @@ mas "Amphetamine", id: 937984704  # Keep-awake utility for macOS
 #cask "epic-games" # Launcher for *Epic Games* games
 #cask "origin"     # Play PC games and connect with your friends
 #cask "8bitdo-ultimate-software" # Control every piece of your controller
-
-# tmp
-cask "jellyfin"
-#cask "transmission"
