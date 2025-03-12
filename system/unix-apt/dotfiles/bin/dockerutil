@@ -37,7 +37,7 @@ stop_compose() {
 
 # Print usage if no arguments are passed
 usage() {
-    echo "Usage: $0 {info|status|start|stop}"
+    echo "Usage: $0 {info|status|start|stop} [compose-file]"
     exit 1
 }
 
