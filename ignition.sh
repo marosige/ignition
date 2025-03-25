@@ -59,7 +59,7 @@ job_configure_preferences="Configure system preferences"
 job_exit="Exit"
 
 # If ignition is not installed yet, only show the install option
-if [ -L "$HOME/bin/ignition" ]; then
+#if [ -L "$HOME/bin/ignition" ]; then
   options=(
     "$job_all"
     "$job_update_system"
@@ -69,18 +69,18 @@ if [ -L "$HOME/bin/ignition" ]; then
     "$job_configure_preferences"
     "$job_exit"
   )
-else
-  echo -e "$IGNITION_WARN Read carefully!"
-  echo "$IGNITION_INDENT This script is configuring system settings and preferences."
-  echo "$IGNITION_INDENT Please be aware that running this script will modify your system and may affect your existing configurations."
-  echo "$IGNITION_INDENT Ensure you have reviewed the script and understand the changes it will make before proceeding: https://github.com/marosige/ignition"
-  echo "$IGNITION_INDENT IMPORTANT: Backup any important configurations or data before running this script."
-  echo "$IGNITION_INDENT It is an irreversible process. Once the setup is complete, reverting the changes may be challenging."
-  options=(
-    "$job_install"
-    "$job_exit"
-  )
-fi
+#else
+#  echo -e "$IGNITION_WARN Read carefully!"
+#  echo "$IGNITION_INDENT This script is configuring system settings and preferences."
+#  echo "$IGNITION_INDENT Please be aware that running this script will modify your system and may affect your existing configurations."
+#  echo "$IGNITION_INDENT Ensure you have reviewed the script and understand the changes it will make before proceeding: https://github.com/marosige/ignition"
+#  echo "$IGNITION_INDENT IMPORTANT: Backup any important configurations or data before running this script."
+#  echo "$IGNITION_INDENT It is an irreversible process. Once the setup is complete, reverting the changes may be challenging."
+#  options=(
+#    "$job_install"
+#    "$job_exit"
+#  )
+#fi
 
 choice=$(lib_menu "${options[@]}")
 
