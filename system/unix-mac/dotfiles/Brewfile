@@ -42,7 +42,7 @@ cask "google-chrome"  # Web browser
 #cask "skype"      # Video chat, voice call and instant messaging application
 
 # Media
-#cask "yt-music"   # YouTube music client
+cask "yt-music"   # YouTube music client
 cask "audacity"   # Multi-track audio editor and recorder
 mas "iMovie", id: 408981434 # A free video-editing program for Apple users
 

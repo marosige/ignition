@@ -71,7 +71,7 @@ addSpace
 # Section: Web
 addApp "/Applications/Google Chrome.app"
 addApp "/Applications/ChatGPT.app"
-addApp "$HOME/Applications/YT Music.app"
+addApp "/Applications/YT Music.app"
 addSpace
 # Section: Private
 #addApp "/Applications/Messenger.app"
@@ -83,7 +83,13 @@ addSpace
 addApp "/System/Applications/Calendar.app"
 addApp "/System/Applications/Reminders.app"
 addApp "/System/Applications/Notes.app"
+addApp "/System/Applications/Passwords.app"
 addApp "/System/Applications/Utilities/Screenshot.app"
+addSpace
+# Section: Telekom
+addApp "/Applications/Cisco/Cisco Secure Client.app"
+addApp "/Applications/Microsoft Outlook.app"
+addApp "/Applications/Microsoft Teams.app"
 addSpace
 # Section: Development
 #addApp "/Applications/Slack.app"
