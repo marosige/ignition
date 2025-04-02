@@ -9,11 +9,8 @@ sleep 5
 
 # List of applications to start (modify as needed)
 apps=(
-    "1Password"
-    "ProtonVPN"
     "MonitorControl"
     "amphetamine"
-    "clipy"
     "magnet"
     "logi Options+"
 )

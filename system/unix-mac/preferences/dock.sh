@@ -74,21 +74,19 @@ addApp "/Applications/ChatGPT.app"
 addApp "$HOME/Applications/YT Music.app"
 addSpace
 # Section: Private
-addApp "/Applications/Messenger.app"
-addApp "/System/Applications/Messages.app"
-addApp "/Applications/WhatsApp.app"
-addApp "/Applications/Hue Sync.app"
-addApp "/Applications/Reolink.app"
-addSpace
+#addApp "/Applications/Messenger.app"
+#addApp "/System/Applications/Messages.app"
+#addApp "/Applications/WhatsApp.app"
+#addApp "/Applications/Reolink.app"
+#addSpace
 # Section: Productivity
 addApp "/System/Applications/Calendar.app"
 addApp "/System/Applications/Reminders.app"
 addApp "/System/Applications/Notes.app"
-addApp "/Applications/1Password.app"
 addApp "/System/Applications/Utilities/Screenshot.app"
 addSpace
 # Section: Development
-addApp "/Applications/Slack.app"
+#addApp "/Applications/Slack.app"
 addApp "/System/Applications/Utilities/Terminal.app"
 addApp "/Applications/Fork.app"
 addApp "/Applications/Visual Studio Code.app"
