@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Check for dependencies
+if ! command -v yt-dlp &> /dev/null; then
+    echo "Error: yt-dlp is not installed. Install it using 'brew install yt-dlp'."
+    exit 1
+fi
+
+if ! command -v ffmpeg &> /dev/null; then
+    echo "Error: ffmpeg is not installed. Install it using 'brew install ffmpeg'."
+    exit 1
+fi
+
+# Get URL from command-line argument
+YT_URL="$1"
+
+# Validate input
+if [[ -z "$YT_URL" ]]; then
+    echo "Error: No URL provided. Usage: youtube-mp3 <YouTube_URL>"
+    exit 1
+fi
+
+# Download the best audio and convert it to MP3
+yt-dlp -f bestaudio --extract-audio --audio-format mp3 -o "%(title)s.%(ext)s" "$YT_URL"
+
+echo "Download complete!"

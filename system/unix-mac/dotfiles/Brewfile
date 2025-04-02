@@ -8,7 +8,7 @@ brew "tree"       # Display directories as trees (with optional color/HTML outpu
 brew "wget"       # Internet file retriever
 brew "imagemagick"# Tools and libraries to manipulate images in many formats
 brew "ffmpeg"     # Play, record, convert, and stream audio and video
-brew "youtube-dl" # Download YouTube videos from the command-line
+brew "yt-dlp"     # Feature-rich command-line audio/video downloader
 brew "speedtest-cli" # Command-line interface for https://speedtest.net bandwidth tests
 brew "dockutil"   # Tool for managing dock items
 cask "mysides"    # A simple CLI tool for Finder sidebar modification.
