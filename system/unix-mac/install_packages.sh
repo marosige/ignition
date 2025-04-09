@@ -20,9 +20,11 @@ brew update
 brew upgrade
 
 # Install Homebrew packages from all Brewfiles
-for brewfile in "$HOME/Brewfile.*"; do
-  echo -e "$IGNITION_TASK Installing from $brewfile..."
-  brew bundle --file="$brewfile"
+for brewfile in "$HOME"/Brewfile.*; do
+  if [[ -f "$brewfile" ]]; then
+    echo -e "$IGNITION_TASK Installing from $brewfile"
+    brew bundle --file="$brewfile"
+  fi
 done
 
 # Remove outdated versions from the cellar including casks
