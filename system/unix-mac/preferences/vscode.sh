@@ -20,4 +20,4 @@ code --install-extension slevesque.sh-beautify
 # Install
 code --install-extension zhuangtongfa.Material-theme
 # Set theme
-osascript -e 'tell application "Visual Studio Code" to activate' && code --install-extension zhuangtongfa.Material-theme && echo '{ "workbench.colorTheme": "One Dark Pro" }' > "$HOME/Library/Application Support/Code/User/settings.json"
+osascript -e 'tell application "Visual Studio Code" to activate' && code --install-extension zhuangtongfa.Material-theme

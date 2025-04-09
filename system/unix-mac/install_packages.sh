@@ -9,6 +9,7 @@ echo -e "$IGNITION_TASK Installing Homebrew Applications..."
 
 # Install Homebrew if not installed - brew.sh
 if ! hash brew 2>/dev/null; then
+  echo -e "$IGNITION_TASK Homebrew not found. Installing..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
@@ -19,13 +20,10 @@ brew update
 brew upgrade
 
 # Install CLI tools & GUI applications
-brewfile="$HOME/Brewfile"
-if [ -f "$brewfile" ]; then
+for brewfile in "$HOME/Brewfile.*"; do
+  echo "Installing from $brewfile..."
   brew bundle --file="$brewfile"
-else
-  echo -e "$IGNITION_FAIL Brewfile not found in $brewfile"
-  exit 1
-fi
+done
 
 # Remove outdated versions from the cellar including casks
 brew cleanup

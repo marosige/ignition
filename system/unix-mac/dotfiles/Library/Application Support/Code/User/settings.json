@@ -1,0 +1,6 @@
+{
+    "workbench.colorTheme": "One Dark Pro",
+    "files.associations": {
+      "Brewfile.*": "ruby"
+    }
+  }

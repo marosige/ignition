@@ -31,7 +31,6 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --all)
-      RUN_UPDATE_SYSTEM=true
       RUN_CREATE_DIRECTORIES=true
       RUN_LINK_FILES=true
       RUN_INSTALL_PACKAGES=true
@@ -45,47 +44,53 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-setupSystem() {
-  # Skip if it's not a folder or is a hidden folder
-  [[ ! -d "$1" || "$(basename "$1")" == .* ]] && return
+# Function to run a specific task for all systems
+runTaskForAllSystems() {
+  local task=$1
+  local description=$2
 
-  export IGNITION_ACTIVE_SYSTEM=$1
-  system_name=$(basename "$system_path")
-  echo -e "$IGNITION_TASK Setting up $system_name"
+  for system_path in "$IGNITION_SYSTEM"/* "$IGNITION_SYSTEM_PRIVATE"/*; do
+    # Skip if it's not a folder or is a hidden folder
+    [[ ! -d "$system_path" || "$(basename "$system_path")" == .* ]] && continue
 
-  if $RUN_CREATE_DIRECTORIES; then
-    echo -e "$IGNITION_TASK Creating directories..."
-    SCRIPT="$IGNITION_ACTIVE_SYSTEM/create_directories.sh"
-    [ -f "$SCRIPT" ] && bash "$SCRIPT"
-  fi
+    export IGNITION_ACTIVE_SYSTEM=$system_path
+    system_name=$(basename "$system_path")
+    echo -e "$IGNITION_TASK $description for $system_name"
 
-  if $RUN_LINK_FILES; then
-    echo -e "$IGNITION_TASK Linking files..."
-    FOLDER="$IGNITION_ACTIVE_SYSTEM/dotfiles"
-    [ -d "$FOLDER" ] && lib_link_directories "$FOLDER" "$HOME"
-  fi
-
-  if $RUN_INSTALL_PACKAGES; then
-    echo -e "$IGNITION_TASK Installing packages..."
-    SCRIPT="$IGNITION_ACTIVE_SYSTEM/install_packages.sh"
-    [ -f "$SCRIPT" ] && bash "$SCRIPT"
-  fi
-
-  if $RUN_CONFIGURE_PREFERENCES; then
-    echo -e "$IGNITION_TASK Configuring preferences..."
-    FOLDER="$IGNITION_ACTIVE_SYSTEM/preferences"
-    [ -d "$FOLDER" ] && lib_run_scripts_in_folder "$FOLDER" "$HOME"
-  fi
-
-  echo -e "$IGNITION_DONE $system_name setup completed"
+    case $task in
+      create_directories)
+        SCRIPT="$IGNITION_ACTIVE_SYSTEM/create_directories.sh"
+        [ -f "$SCRIPT" ] && bash "$SCRIPT"
+        ;;
+      link_files)
+        FOLDER="$IGNITION_ACTIVE_SYSTEM/dotfiles"
+        [ -d "$FOLDER" ] && lib_link_directories "$FOLDER" "$HOME"
+        ;;
+      install_packages)
+        SCRIPT="$IGNITION_ACTIVE_SYSTEM/install_packages.sh"
+        [ -f "$SCRIPT" ] && bash "$SCRIPT"
+        ;;
+      configure_preferences)
+        FOLDER="$IGNITION_ACTIVE_SYSTEM/preferences"
+        [ -d "$FOLDER" ] && lib_run_scripts_in_folder "$FOLDER" "$HOME"
+        ;;
+    esac
+  done
 }
 
-# Loop through each system directory
-for system_path in "$IGNITION_SYSTEM"/*; do
-  setupSystem "$system_path"
-done
+# Run tasks in order
+if $RUN_CREATE_DIRECTORIES; then
+  runTaskForAllSystems "create_directories" "Creating directories"
+fi
 
-# Loop through each private system directory (stored in a separate repository)
-for system_path in "$IGNITION_SYSTEM_PRIVATE"/*; do
-  setupSystem "$system_path"
-done
+if $RUN_LINK_FILES; then
+  runTaskForAllSystems "link_files" "Linking files"
+fi
+
+if $RUN_INSTALL_PACKAGES; then
+  runTaskForAllSystems "install_packages" "Installing packages"
+fi
+
+if $RUN_CONFIGURE_PREFERENCES; then
+  runTaskForAllSystems "configure_preferences" "Configuring preferences"
+fi
