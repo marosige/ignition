@@ -59,7 +59,6 @@ job_exit="Exit"
 
 options=(
   "$job_all"
-  "$job_update_system"
   "$job_create_directories"
   "$job_link_files"
   "$job_install_packages"
