@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-[ -z "$IGNITION_ROOT" ] && source ~/.ignition/bootstrap.sh
+[ -z "$IGNITION_ROOT" ] && source ~/.ignition/ignition/bootstrap.sh
 
 ###############################################################################
 # This script sets up ignition for all systems
 ###############################################################################
 
 # Default values for jobs
-RUN_UPDATE_SYSTEM=false
 RUN_CREATE_DIRECTORIES=false
 RUN_LINK_FILES=false
 RUN_INSTALL_PACKAGES=false
@@ -15,10 +14,6 @@ RUN_CONFIGURE_PREFERENCES=false
 # Parse command-line options
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --update-system)
-      RUN_UPDATE_SYSTEM=true
-      shift
-      ;;
     --create-directories)
       RUN_CREATE_DIRECTORIES=true
       shift
@@ -50,40 +45,47 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-job() {
-  TITLE=$1
-  SCRIPT=$2
-  JOB="$IGNITION_ACTIVE_SYSTEM/job/${SCRIPT}.sh"
-  if [ -f "$JOB" ]; then
-    echo -e "$IGNITION_TASK $TITLE"
-    bash "$JOB"
-  fi
-}  
+setupSystem() {
+  # Skip if it's not a folder or is a hidden folder
+  [[ ! -d "$1" || "$(basename "$1")" == .* ]] && return
 
-runJobs() {
-  system_path=$1
-  if [[ -d "$system_path" ]]; then
-    export IGNITION_ACTIVE_SYSTEM="$system_path"
-    system_name=$(basename "$system_path")
-    echo -e "$IGNITION_TASK Setting up $system_name"
-    $RUN_UPDATE_SYSTEM && job "Updating system..." update_system
-    $RUN_CREATE_DIRECTORIES && job "Creating directories..." create_directories
-    $RUN_LINK_FILES && job "Linking files..." link_files
-    $RUN_INSTALL_PACKAGES && job "Installing packages..." install_packages
-    $RUN_CONFIGURE_PREFERENCES && job "Configuring preferences..." configure_preferences
-    echo -e "$IGNITION_DONE $system_name setup completed"
+  export IGNITION_ACTIVE_SYSTEM=$1
+  system_name=$(basename "$system_path")
+  echo -e "$IGNITION_TASK Setting up $system_name"
+
+  if $RUN_CREATE_DIRECTORIES; then
+    echo -e "$IGNITION_TASK Creating directories..."
+    SCRIPT="$IGNITION_ACTIVE_SYSTEM/create_directories.sh"
+    [ -f "$SCRIPT" ] && bash "$SCRIPT"
   fi
+
+  if $RUN_LINK_FILES; then
+    echo -e "$IGNITION_TASK Linking files..."
+    FOLDER="$IGNITION_ACTIVE_SYSTEM/dotfiles"
+    [ -d "$FOLDER" ] && lib_link_directories "$FOLDER" "$HOME"
+  fi
+
+  if $RUN_INSTALL_PACKAGES; then
+    echo -e "$IGNITION_TASK Installing packages..."
+    SCRIPT="$IGNITION_ACTIVE_SYSTEM/install_packages.sh"
+    [ -f "$SCRIPT" ] && bash "$SCRIPT"
+  fi
+
+  if $RUN_CONFIGURE_PREFERENCES; then
+    echo -e "$IGNITION_TASK Configuring preferences..."
+    FOLDER="$IGNITION_ACTIVE_SYSTEM/preferences"
+    [ -d "$FOLDER" ] && lib_run_scripts_in_folder "$FOLDER" "$HOME"
+  fi
+
+  echo -e "$IGNITION_DONE $system_name setup completed"
 }
 
 # Loop through each system directory
 for system_path in "$IGNITION_SYSTEM"/*; do
-  runJobs "$system_path"
+  setupSystem "$system_path"
 done
 
 # Loop through each private system directory (stored in a separate repository)
 for system_path in "$IGNITION_SYSTEM_PRIVATE"/*; do
-  # Skip hidden folders (especially .git)
-  if [[ -d "$system_path" && "$(basename "$system_path")" != .* ]]; then
-    runJobs "$system_path"
-  fi
+  setupSystem "$system_path"
 done

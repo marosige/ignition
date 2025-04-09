@@ -51,7 +51,6 @@ fi
 
 # Show menu
 job_all="Run all jobs"
-job_update_system="Update system"
 job_create_directories="Create directories"
 job_link_files="Link files"
 job_install_packages="Install packages"
@@ -72,10 +71,6 @@ case $(lib_menu "${options[@]}") in
   "$job_all")
     bash "$IGNITION_DIR/setup.sh" --all
     echo -e "$IGNITION_DONE Setting up Ignition completed!"
-    ;;
-  "$job_update_system")
-    bash "$IGNITION_DIR/setup.sh" --update-system
-    echo -e "$IGNITION_DONE Updating system completed!"
     ;;
   "$job_create_directories")
     bash "$IGNITION_DIR/setup.sh" --create-directories

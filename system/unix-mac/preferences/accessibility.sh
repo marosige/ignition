@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-[ -z "$IGNITION_ROOT" ] && source ~/.ignition/bootstrap.sh
+[ -z "$IGNITION_ROOT" ] && source ~/.ignition/ignition/bootstrap.sh
 
 ###############################################################################
 # Accessibility

@@ -2,13 +2,8 @@
 [ -z "$IGNITION_ROOT" ] && source ~/.ignition/ignition/bootstrap.sh
 
 ###############################################################################
-# Safari
+# Link files
 ###############################################################################
-exit=0
 
-# Show full website address in Safari
-# On: true
-# Off: False
-sudo defaults write com.apple.Safari ShowFullURLInSmartSearchField -bool true || exit=1
-
-exit $exit
+# Link ignition to the bin directory
+ln -sf "$IGNITION_ROOT/ignition/ignition.sh" "$HOME/bin/ignition"
