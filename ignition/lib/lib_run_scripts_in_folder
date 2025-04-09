@@ -24,8 +24,8 @@ fi
 
 echo -e "$IGNITION_TASK Running scripts in: $SCRIPT_FOLDER"
 
-# Find all .sh files and execute only those that have execute permissions
-find "$SCRIPT_FOLDER" -type f -name "*.sh" -print0 | while IFS= read -r -d '' script; do
+# Find all .sh files, skip hidden ones, and execute only those that have execute permissions
+find "$SCRIPT_FOLDER" -type f -name "*.sh" ! -name ".*" -print0 | while IFS= read -r -d '' script; do
     if [ -x "$script" ]; then
         script_name=$(basename "$script")
         echo -e "$IGNITION_TASK Executing: $script_name"

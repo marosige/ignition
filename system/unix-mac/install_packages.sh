@@ -21,7 +21,7 @@ brew upgrade
 
 # Install CLI tools & GUI applications
 for brewfile in "$HOME/Brewfile.*"; do
-  echo "Installing from $brewfile..."
+  echo -e "$IGNITION_TASK Installing from $brewfile..."
   brew bundle --file="$brewfile"
 done
 
