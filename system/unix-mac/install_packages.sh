@@ -19,7 +19,7 @@ brew update
 # Upgrade existing packages
 brew upgrade
 
-# Install CLI tools & GUI applications
+# Install Homebrew packages from all Brewfiles
 for brewfile in "$HOME/Brewfile.*"; do
   echo -e "$IGNITION_TASK Installing from $brewfile..."
   brew bundle --file="$brewfile"
