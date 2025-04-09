@@ -50,6 +50,7 @@ addApp "/System/Applications/Utilities/Screenshot.app"
 addSpace
 # Section: Telekom
 addApp "/Applications/Cisco/Cisco Secure Client.app"
+addApp "/Applications/Figma.app"
 addApp "/Applications/Microsoft Outlook.app"
 addApp "/Applications/Microsoft Teams.app"
 addSpace
