@@ -49,32 +49,37 @@ runTaskForAllSystems() {
   local task=$1
   local description=$2
 
-  for system_path in "$IGNITION_SYSTEM"/* "$IGNITION_SYSTEM_PRIVATE"/*; do
-    # Skip if it's not a folder or is a hidden folder
-    [[ ! -d "$system_path" || "$(basename "$system_path")" == .* ]] && continue
+  for base_dir in "$IGNITION_SYSTEM" "$IGNITION_SYSTEM_PRIVATE"; do
+    # Skip if the base_dir doesn't exist
+    [ ! -d "$base_dir" ] && continue
 
-    export IGNITION_ACTIVE_SYSTEM=$system_path
-    system_name=$(basename "$system_path")
-    echo -e "$IGNITION_TASK $description for $system_name"
+    for system_path in "$base_dir"/*; do
+      # Skip if it's not a folder or is a hidden folder
+      [[ ! -d "$system_path" || "$(basename "$system_path")" == .* ]] && continue
 
-    case $task in
-      create_directories)
-        SCRIPT="$IGNITION_ACTIVE_SYSTEM/create_directories.sh"
-        [ -f "$SCRIPT" ] && bash "$SCRIPT"
-        ;;
-      link_files)
-        FOLDER="$IGNITION_ACTIVE_SYSTEM/dotfiles"
-        [ -d "$FOLDER" ] && lib_link_directories "$FOLDER" "$HOME"
-        ;;
-      install_packages)
-        SCRIPT="$IGNITION_ACTIVE_SYSTEM/install_packages.sh"
-        [ -f "$SCRIPT" ] && bash "$SCRIPT"
-        ;;
-      configure_preferences)
-        FOLDER="$IGNITION_ACTIVE_SYSTEM/preferences"
-        [ -d "$FOLDER" ] && lib_run_scripts_in_folder "$FOLDER" "$HOME"
-        ;;
-    esac
+      export IGNITION_ACTIVE_SYSTEM=$system_path
+      system_name=$(basename "$system_path")
+      echo -e "$IGNITION_TASK $description for $system_name"
+
+      case $task in
+        create_directories)
+          SCRIPT="$IGNITION_ACTIVE_SYSTEM/create_directories.sh"
+          [ -f "$SCRIPT" ] && bash "$SCRIPT"
+          ;;
+        link_files)
+          FOLDER="$IGNITION_ACTIVE_SYSTEM/dotfiles"
+          [ -d "$FOLDER" ] && lib_link_directories "$FOLDER" "$HOME"
+          ;;
+        install_packages)
+          SCRIPT="$IGNITION_ACTIVE_SYSTEM/install_packages.sh"
+          [ -f "$SCRIPT" ] && bash "$SCRIPT"
+          ;;
+        configure_preferences)
+          FOLDER="$IGNITION_ACTIVE_SYSTEM/preferences"
+          [ -d "$FOLDER" ] && lib_run_scripts_in_folder "$FOLDER" "$HOME"
+          ;;
+      esac
+    done
   done
 }
 
