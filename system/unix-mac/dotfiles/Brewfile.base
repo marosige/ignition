@@ -1,5 +1,10 @@
-# CLI
+# Ignition dependencies
 brew "mas"        # Mac App Store command-line interface
+brew "dockutil"   # Tool for managing dock items
+cask "mysides"    # A simple CLI tool for Finder sidebar modification.
+brew "gum"        # Tool for glamorous shell scripts
+
+# CLI
 brew "bash"       # Update Bash to 5.2+ (Apple won't distribute newer versions due to license concerns)
 brew "fish"       # User-friendly command-line shell for UNIX-like operating systems
 brew "midnight-commander"   # midnight-commander Terminal-based visual file manager
@@ -10,10 +15,7 @@ brew "imagemagick"# Tools and libraries to manipulate images in many formats
 brew "ffmpeg"     # Play, record, convert, and stream audio and video
 brew "yt-dlp"     # Feature-rich command-line audio/video downloader
 brew "speedtest-cli" # Command-line interface for https://speedtest.net bandwidth tests
-brew "dockutil"   # Tool for managing dock items
-cask "mysides"    # A simple CLI tool for Finder sidebar modification.
 brew "btop"       # Resource monitor. C++ version and continuation of bashtop and bpytop
-brew "gum"        # Tool for glamorous shell scripts
 brew "neofetch"   # Fast, highly customisable system info script
 
 # Development tools
