@@ -5,13 +5,13 @@
 # Install Packages
 ###############################################################################
 
-echo -e "$IGNITION_TASK Installing Homebrew Applications..."
+# On arm architecture (M1/M2), Rosetta is required for x86_64 binaries
+if [[ "$(uname -m)" == "arm64" ]]; then
+  echo -e "$IGNITION_TASK Installing Rosetta..."
+  softwareupdate --install-rosetta --agree-to-license
+fi
 
-# Request sudo access upfront
-sudo -v
-while true; do sudo -n true; sleep 60; done 2>/dev/null &
-KEEP_ALIVE_PID=$!
-trap 'kill "$KEEP_ALIVE_PID"' EXIT
+echo -e "$IGNITION_TASK Installing Homebrew Applications..."
 
 # Install Homebrew if not installed
 if ! hash brew 2>/dev/null; then
