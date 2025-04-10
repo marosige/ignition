@@ -5,9 +5,6 @@
 # Visual Studio Code Settings
 ###############################################################################
 
-echo -e "$IGNITION_WARN Skipping Visual Studio Code setup now..."
-exit 0
-
 ## Extensions
 # Bash IDE (Autocompletion & linting)
 code --install-extension mads-hartmann.bash-ide-vscode
