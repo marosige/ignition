@@ -6,4 +6,4 @@
 ###############################################################################
 
 # Link ignition to the bin directory
-ln -sf "$IGNITION_ROOT/ignition/ignition.sh" "$HOME/bin/ignition"
+ln -sf "$IGNITION_DIR/ignition.sh" "$HOME/bin/ignition"
