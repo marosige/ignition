@@ -11,48 +11,69 @@ if ! command -v ffmpeg &> /dev/null; then
     exit 1
 fi
 
-# Usage message
+# Usage info
 usage() {
-    echo ""
-    echo "Usage: youtube-download <YouTube_URL>"
-    echo ""
-    echo "This script downloads audio from YouTube or YouTube Music."
-    echo ""
-    echo "File names:"
-    echo "  - YouTube video: 'Video Title.mp3'"
-    echo "  - YouTube playlist: 'Playlist Title/001 - Video Title.mp3', '002 - Video Title.mp3', etc."
-    echo "  - YouTube Music track: 'Track Title.mp3'"
-    echo "  - YouTube Music playlist: 'Artist - Release Date - Album Name/001 - Track Title.mp3', '002 - Track Title.mp3', etc."
-    echo ""
+    echo
+    echo "Usage:"
+    echo "  youtube-mp3 <YouTube_URL>"
+    echo
+    echo "Downloads audio from YouTube or YouTube Music:"
+    echo "  • Playlists → saved in folders under the current directory"
+    echo "  • Single tracks → saved in current directory"
+    echo
     exit 1
 }
 
-# Get URL
+# Get and validate URL
 YT_URL="$1"
 if [[ -z "$YT_URL" ]]; then
     echo "Error: No URL provided."
     usage
 fi
 
-# Detect if URL is a playlist (YouTube or YouTube Music)
-if [[ "$YT_URL" == *"playlist?list="* ]]; then
-    if [[ "$YT_URL" == *"music.youtube.com"* ]]; then
-        # For YouTube Music playlists, use artist, album release date, and album name
-        OUT_TEMPLATE="%(artist)s - %(release_date)s - %(album)s/%(playlist_index)03d - %(title)s.%(ext)s"
+# Normalize URL for case-insensitive matching
+YT_URL_LC="$(echo "$YT_URL" | tr '[:upper:]' '[:lower:]')"
+
+# Detect playlist
+if [[ "$YT_URL_LC" == *"playlist?list="* ]]; then
+    if [[ "$YT_URL_LC" == *"music.youtube.com"* ]]; then
+        # YouTube Music playlist
+        yt-dlp \
+            -f bestaudio \
+            --extract-audio \
+            --audio-format mp3 \
+            --output "%(album_artist)s - %(release_year)s - %(album)s/%(playlist_index)03d - %(title)s%(feat_add)s.%(ext)s" \
+            --parse-metadata "artist:%(feat_add>.artist:-%(album_artist)s)s" \
+            --replace-in-metadata "feat_add:^( - )?(.*)$:( (feat. \2))" \
+            "$YT_URL"
     else
-        # For regular YouTube playlists, use the playlist title for the folder name
-        OUT_TEMPLATE="%(playlist_title)s/%(playlist_index)03d - %(title)s.%(ext)s"
+        # Regular YouTube playlist
+        yt-dlp \
+            -f bestaudio \
+            --extract-audio \
+            --audio-format mp3 \
+            --output "%(playlist_title)s/%(playlist_index)03d - %(title)s.%(ext)s" \
+            "$YT_URL"
     fi
 else
-    OUT_TEMPLATE="%(title)s.%(ext)s"
+    # Single video or music track
+    if [[ "$YT_URL_LC" == *"music.youtube.com"* ]]; then
+        yt-dlp \
+            -f bestaudio \
+            --extract-audio \
+            --audio-format mp3 \
+            --output "%(title)s%(feat_add)s.%(ext)s" \
+            --parse-metadata "artist:%(feat_add>.artist:-%(album_artist)s)s" \
+            --replace-in-metadata "feat_add:^( - )?(.*)$:( (feat. \2))" \
+            "$YT_URL"
+    else
+        yt-dlp \
+            -f bestaudio \
+            --extract-audio \
+            --audio-format mp3 \
+            --output "%(title)s.%(ext)s" \
+            "$YT_URL"
+    fi
 fi
 
-# Download the best audio and convert it to MP3
-yt-dlp \
-    -f bestaudio \
-    --extract-audio \
-    --audio-format mp3 \
-    --output "$OUT_TEMPLATE" \
-    "$YT_URL"
-
-echo "Download complete!"
+echo "✅ Download complete."
