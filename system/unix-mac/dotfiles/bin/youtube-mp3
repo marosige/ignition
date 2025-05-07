@@ -44,7 +44,7 @@ if [[ "$YT_URL_LC" == *"playlist?list="* ]]; then
             --audio-format mp3 \
             --output "%(album_artist)s - %(release_year)s - %(album)s/%(playlist_index)03d - %(title)s%(feat_add)s.%(ext)s" \
             --parse-metadata "artist:%(feat_add>.artist:-%(album_artist)s)s" \
-            --replace-in-metadata "feat_add:^( - )?(.*)$:( (feat. \2))" \
+            --replace-in-metadata feat_add "^( - )?(.*)$" " (feat. \2)" \
             "$YT_URL"
     else
         # Regular YouTube playlist
@@ -64,7 +64,7 @@ else
             --audio-format mp3 \
             --output "%(title)s%(feat_add)s.%(ext)s" \
             --parse-metadata "artist:%(feat_add>.artist:-%(album_artist)s)s" \
-            --replace-in-metadata "feat_add:^( - )?(.*)$:( (feat. \2))" \
+            --replace-in-metadata feat_add "^( - )?(.*)$" " (feat. \2)" \
             "$YT_URL"
     else
         yt-dlp \
