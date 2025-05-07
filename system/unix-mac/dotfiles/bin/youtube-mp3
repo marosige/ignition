@@ -16,12 +16,13 @@ usage() {
     echo ""
     echo "Usage: youtube-download <YouTube_URL>"
     echo ""
-    echo "Examples:"
-    echo "  youtube-download https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-    echo "    → Downloads single video as 'Video Title.mp3'"
+    echo "This script downloads audio from YouTube or YouTube Music."
     echo ""
-    echo "  youtube-download https://www.youtube.com/playlist?list=PLxyz..."
-    echo "    → Downloads playlist with filenames like '001 - Track Name.mp3'"
+    echo "File names:"
+    echo "  - YouTube video: 'Video Title.mp3'"
+    echo "  - YouTube playlist: 'Playlist Title/001 - Video Title.mp3', '002 - Video Title.mp3', etc."
+    echo "  - YouTube Music track: 'Track Title.mp3'"
+    echo "  - YouTube Music playlist: 'Artist - Release Date - Album Name/001 - Track Title.mp3', '002 - Track Title.mp3', etc."
     echo ""
     exit 1
 }
@@ -33,9 +34,15 @@ if [[ -z "$YT_URL" ]]; then
     usage
 fi
 
-# Detect if URL is a playlist
+# Detect if URL is a playlist (YouTube or YouTube Music)
 if [[ "$YT_URL" == *"playlist?list="* ]]; then
-    OUT_TEMPLATE="%(playlist_title|NA)s/%(playlist_index)03d - %(title)s.%(ext)s"
+    if [[ "$YT_URL" == *"music.youtube.com"* ]]; then
+        # For YouTube Music playlists, use artist, album release date, and album name
+        OUT_TEMPLATE="%(artist)s - %(release_date)s - %(album)s/%(playlist_index)03d - %(title)s.%(ext)s"
+    else
+        # For regular YouTube playlists, use the playlist title for the folder name
+        OUT_TEMPLATE="%(playlist_title)s/%(playlist_index)03d - %(title)s.%(ext)s"
+    fi
 else
     OUT_TEMPLATE="%(title)s.%(ext)s"
 fi
