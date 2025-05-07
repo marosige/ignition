@@ -19,7 +19,7 @@ usage() {
     echo
     echo "Downloads audio from YouTube or YouTube Music:"
     echo "  • Playlist → saved in a folder with the playlist name"
-    echo "  • Single track → saved in current directory"
+    echo "  • Single → saved in current directory"
     echo
     exit 1
 }
