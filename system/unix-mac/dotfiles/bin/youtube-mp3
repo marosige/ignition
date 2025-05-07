@@ -33,13 +33,7 @@ fi
 
 if [[ "$YT_URL" == *"playlist?list="* ]]; then
     # Playlist
-    if [[ "$YT_URL" == *"music.youtube.com"* ]]; then
-        # YouTube Music playlist
-        OUTPUT="%(uploader)s - %(album)s/%(playlist_index)03d - %(title)s.%(ext)s"
-    else
-        # Regular YouTube playlist
-        OUTPUT="%(playlist_title)s/%(playlist_index)03d - %(title)s.%(ext)s"
-    fi
+    OUTPUT="%(playlist_title)s/%(playlist_index)03d - %(title)s.%(ext)s"
 else
     # Single track
     OUTPUT="%(title)s.%(ext)s"
