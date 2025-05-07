@@ -11,16 +11,41 @@ if ! command -v ffmpeg &> /dev/null; then
     exit 1
 fi
 
-# Get URL from command-line argument
-YT_URL="$1"
-
-# Validate input
-if [[ -z "$YT_URL" ]]; then
-    echo "Error: No URL provided. Usage: youtube-mp3 <YouTube_URL>"
+# Usage message
+usage() {
+    echo ""
+    echo "Usage: youtube-download <YouTube_URL>"
+    echo ""
+    echo "Examples:"
+    echo "  youtube-download https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    echo "    → Downloads single video as 'Video Title.mp3'"
+    echo ""
+    echo "  youtube-download https://www.youtube.com/playlist?list=PLxyz..."
+    echo "    → Downloads playlist with filenames like '001 - Track Name.mp3'"
+    echo ""
     exit 1
+}
+
+# Get URL
+YT_URL="$1"
+if [[ -z "$YT_URL" ]]; then
+    echo "Error: No URL provided."
+    usage
+fi
+
+# Detect if URL is a playlist
+if [[ "$YT_URL" == *"playlist?list="* ]]; then
+    OUT_TEMPLATE="%(playlist_title|NA)s/%(playlist_index)03d - %(title)s.%(ext)s"
+else
+    OUT_TEMPLATE="%(title)s.%(ext)s"
 fi
 
 # Download the best audio and convert it to MP3
-yt-dlp -f bestaudio --extract-audio --audio-format mp3 -o "%(title)s.%(ext)s" "$YT_URL"
+yt-dlp \
+    -f bestaudio \
+    --extract-audio \
+    --audio-format mp3 \
+    --output "$OUT_TEMPLATE" \
+    "$YT_URL"
 
 echo "Download complete!"
