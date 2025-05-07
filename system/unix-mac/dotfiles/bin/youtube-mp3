@@ -19,7 +19,7 @@ usage() {
     echo
     echo "Downloads audio from YouTube or YouTube Music:"
     echo "  • Playlist → saved in a folder with the playlist name"
-    echo "  • Single → saved in current directory"
+    echo "  • Single track → saved in current directory"
     echo
     exit 1
 }
@@ -31,16 +31,18 @@ if [[ -z "$YT_URL" ]]; then
     usage
 fi
 
-PLAYLIST_TITLE="%(playlist_title)s"
-TITLE="%(title)s.%(ext)s"
-
-# Check if the URL is a playlist or a single video
 if [[ "$YT_URL" == *"playlist?list="* ]]; then
-    OUTPUT="$PLAYLIST_TITLE/$TITLE"
-elif [[ "$YT_URL" == *"watch"* ]]; then
-    OUTPUT="$TITLE"
+    # Playlist
+    if [[ "$YT_URL" == *"music.youtube.com"* ]]; then
+        # YouTube Music playlist
+        OUTPUT="%(uploader)s - %(album)s/%(playlist_index)03d - %(title)s.%(ext)s"
+    else
+        # Regular YouTube playlist
+        OUTPUT="%(playlist_title)s/%(playlist_index)03d - %(title)s.%(ext)s"
+    fi
 else
-    usage
+    # Single track
+    OUTPUT="%(title)s.%(ext)s"
 fi
 
 # Download the audio
