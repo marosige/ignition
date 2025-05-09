@@ -5,12 +5,14 @@
 # Install Packages
 ###############################################################################
 
+## Rosetta
 # On arm architecture (M1/M2), Rosetta is required for x86_64 binaries
 if [[ "$(uname -m)" == "arm64" ]]; then
   echo -e "$IGNITION_TASK Installing Rosetta..."
   softwareupdate --install-rosetta --agree-to-license
 fi
 
+## Homebrew
 echo -e "$IGNITION_TASK Installing Homebrew Applications..."
 
 # Install Homebrew if not installed
@@ -41,3 +43,8 @@ done
 
 # Clean up outdated versions from the cellar, including casks
 brew cleanup
+
+## git lfs
+
+# Enable git large file storage
+git lfs install

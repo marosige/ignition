@@ -35,6 +35,10 @@ case "$PULL_OUTPUT" in
     echo -e "$IGNITION_WARN Ignition updated with autostash."
     exec "$0"
     ;;
+  *"sudo xcodebuild -license"*)
+    echo -e "$IGNITION_WARN You have not agreed to the Xcode license agreements. Please run 'sudo xcodebuild -license' from within a Terminal window to review and agree to the Xcode and Apple SDKs license."
+    exit 1
+    ;;
   *)
     echo -e "$IGNITION_DONE Ignition updated!"
     exec "$0"
