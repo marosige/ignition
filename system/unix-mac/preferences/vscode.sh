@@ -12,6 +12,8 @@ code --install-extension mads-hartmann.bash-ide-vscode
 code --install-extension timonwong.shellcheck
 # Bash Beautify (Formats Bash scripts)
 code --install-extension slevesque.sh-beautify
+# Kotlin Language Support (Syntax highlighting, IntelliSense, debugging)
+code --install-extension fwcd.kotlin
 
 ## One Dark Theme
 # Install
