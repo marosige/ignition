@@ -12,6 +12,8 @@ code --install-extension mads-hartmann.bash-ide-vscode
 code --install-extension timonwong.shellcheck
 # Bash Beautify (Formats Bash scripts)
 code --install-extension slevesque.sh-beautify
+# Python extension (Linting, IntelliSense, Jupyter support)
+code --install-extension ms-python.python
 
 ## One Dark Theme
 # Install
