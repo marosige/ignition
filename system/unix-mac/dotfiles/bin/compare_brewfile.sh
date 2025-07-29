@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-BREWFILE_PATH="$HOME/Brewfile"
 FETCH_DESCRIPTIONS=false
 UNINSTALL=false
 
@@ -22,9 +21,32 @@ for arg in "$@"; do
   esac
 done
 
-# Extract formulae and casks from Brewfile
-mapfile -t brewfile_formulae < <(grep -E '^brew "' "$BREWFILE_PATH" | awk -F'"' '{print $2}' | tr '[:upper:]' '[:lower:]')
-mapfile -t brewfile_casks < <(grep -E '^cask "' "$BREWFILE_PATH" | awk -F'"' '{print $2}' | tr '[:upper:]' '[:lower:]')
+# Gather all Brewfiles: $HOME/Brewfile and $HOME/Brewfile.*
+BREWFILE_PATHS=()
+[[ -f "$HOME/Brewfile" ]] && BREWFILE_PATHS+=("$HOME/Brewfile")
+BREWFILE_PATHS+=("$HOME"/Brewfile.*)
+
+brewfile_formulae=()
+brewfile_casks=()
+
+# Extract formulae and casks from each Brewfile
+for path in "${BREWFILE_PATHS[@]}"; do
+  [[ -f "$path" ]] || continue
+  mapfile -t f < <(grep -E '^brew "' "$path" | awk -F'"' '{print $2}' | tr '[:upper:]' '[:lower:]')
+  mapfile -t c < <(grep -E '^cask "' "$path" | awk -F'"' '{print $2}' | tr '[:upper:]' '[:lower:]')
+  brewfile_formulae+=("${f[@]}")
+  brewfile_casks+=("${c[@]}")
+done
+
+# Deduplicate
+brewfile_formulae=($(printf "%s\n" "${brewfile_formulae[@]}" | sort -u))
+brewfile_casks=($(printf "%s\n" "${brewfile_casks[@]}" | sort -u))
+
+# Warn if no entries found
+if [[ ${#brewfile_formulae[@]} -eq 0 && ${#brewfile_casks[@]} -eq 0 ]]; then
+  echo "⚠️ Warning: No formulae or casks found in any Brewfile."
+  echo "Checked: ${BREWFILE_PATHS[*]}"
+fi
 
 # Get the list of installed formulae and casks
 mapfile -t installed_formulae < <(brew list --formulae | tr '[:upper:]' '[:lower:]')
