@@ -5,8 +5,5 @@
 # Configuring SSH
 ###############################################################################
 
-echo -e "$IGNITION_WARN Skipping SSH setup now..."
-exit 0
-
 echo -e "$IGNITION_TASK Enabling and starting OpenSSH..."
 systemctl enable --now ssh

@@ -5,9 +5,6 @@
 # Configuring UFW firewall
 ###############################################################################
 
-echo -e "$IGNITION_WARN Skipping UFW setup now..."
-exit 0
-
 echo -e "$IGNITION_TASK Configuring UFW firewall..."
 sudo ufw allow OpenSSH  # Allow SSH
 sudo ufw allow 9091/tcp  # Transmission Web UI

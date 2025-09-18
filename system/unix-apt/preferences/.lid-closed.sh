@@ -6,9 +6,6 @@
 ###############################################################################
 exit=0
 
-echo -e "$IGNITION_WARN Skipping lid closed setup now..."
-exit 0
-
 if grep -q open /proc/acpi/button/lid/*/state; then
   sudo sed -i 's/#HandleLidSwitch=suspend/HandleLidSwitch=ignore/' /etc/systemd/logind.conf || exit=1
   sudo systemctl restart systemd-logind || exit=1
