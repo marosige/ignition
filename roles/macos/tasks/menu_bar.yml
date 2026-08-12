@@ -1,0 +1,35 @@
+---
+- name: "Menu Bar | Show battery percentage"
+  community.general.osx_defaults:
+    domain: com.apple.controlcenter
+    key: BatteryShowPercentage
+    type: bool
+    value: "{{ macos_menu_bar_battery_percentage }}"
+
+- name: "Menu Bar | Bluetooth icon"
+  community.general.osx_defaults:
+    domain: com.apple.controlcenter
+    key: Bluetooth
+    type: int
+    value: "{{ macos_menu_bar_bluetooth }}"
+
+- name: "Menu Bar | Sound icon"
+  community.general.osx_defaults:
+    domain: com.apple.controlcenter
+    key: Sound
+    type: int
+    value: "{{ macos_menu_bar_sound }}"
+
+- name: "Menu Bar | Show text input menu"
+  community.general.osx_defaults:
+    domain: com.apple.TextInputMenu
+    key: visible
+    type: bool
+    value: "{{ macos_menu_bar_text_input }}"
+
+- name: "Menu Bar | Show AirPlay mirroring options"
+  community.general.osx_defaults:
+    domain: com.apple.airplay
+    key: showInMenuBarIfPresent
+    type: bool
+    value: "{{ macos_menu_bar_airplay }}"

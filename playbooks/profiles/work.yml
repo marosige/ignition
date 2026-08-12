@@ -1,0 +1,43 @@
+---
+dock_apps:
+  # Finder is always first (added by macOS automatically)
+  - { spacer: true }
+  - /Applications/Google Chrome.app
+  - /Applications/ChatGPT.app
+  - /Applications/YT Music.app
+  - { spacer: true }
+  - /System/Applications/Calendar.app
+  - /System/Applications/Reminders.app
+  - /System/Applications/Notes.app
+  - /System/Applications/Passwords.app
+  - /System/Applications/Utilities/Screenshot.app
+  - { spacer: true }
+  - /Applications/Cisco/Cisco Secure Client.app
+  - /Applications/Figma.app
+  - /Applications/Microsoft Outlook.app
+  - /Applications/Microsoft Teams.app
+  - { spacer: true }
+  - /System/Applications/Utilities/Terminal.app
+  - /Applications/Fork.app
+  - /Applications/Visual Studio Code.app
+  - /Applications/Android Studio.app
+  - { spacer: true }
+
+dock_folders:
+  - "{{ ansible_env.HOME }}/Downloads"
+
+startup_apps:
+  - MonitorControl
+  - Amphetamine
+  - Magnet
+  - logi Options+
+
+homebrew_extra_packages: []
+homebrew_extra_casks:
+  - microsoft-teams
+  - microsoft-office
+  - adobe-acrobat-reader
+  - figma
+
+homebrew_extra_mas_apps:
+  - { id: 497799835, name: "Xcode" }

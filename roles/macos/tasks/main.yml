@@ -1,0 +1,15 @@
+---
+- ansible.builtin.import_tasks: accessibility.yml
+- ansible.builtin.import_tasks: date_time.yml
+- ansible.builtin.import_tasks: desktop.yml
+- ansible.builtin.import_tasks: displays.yml
+- ansible.builtin.import_tasks: finder.yml
+- ansible.builtin.import_tasks: keyboard.yml
+- ansible.builtin.import_tasks: menu_bar.yml
+- ansible.builtin.import_tasks: mission_control.yml
+- ansible.builtin.import_tasks: notifications.yml
+- ansible.builtin.import_tasks: safari.yml
+- ansible.builtin.import_tasks: screenshot.yml
+- ansible.builtin.import_tasks: security.yml
+- ansible.builtin.import_tasks: siri.yml
+- ansible.builtin.import_tasks: trackpad.yml

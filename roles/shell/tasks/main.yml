@@ -1,0 +1,35 @@
+---
+- name: Add Homebrew fish to /etc/shells (Intel path)
+  ansible.builtin.lineinfile:
+    path: /etc/shells
+    line: /usr/local/bin/fish
+    state: present
+  become: true
+
+- name: Add Homebrew fish to /etc/shells (Apple Silicon path)
+  ansible.builtin.lineinfile:
+    path: /etc/shells
+    line: /opt/homebrew/bin/fish
+    state: present
+  become: true
+
+- name: Check fish path (Apple Silicon)
+  ansible.builtin.stat:
+    path: /opt/homebrew/bin/fish
+  register: fish_arm
+
+- name: Check fish path (Intel)
+  ansible.builtin.stat:
+    path: /usr/local/bin/fish
+  register: fish_intel
+
+- name: Select fish shell path
+  ansible.builtin.set_fact:
+    fish_shell_path: "{{ '/opt/homebrew/bin/fish' if fish_arm.stat.exists else '/usr/local/bin/fish' }}"
+
+- name: Set fish as the default shell
+  ansible.builtin.user:
+    name: "{{ ansible_user_id }}"
+    shell: "{{ fish_shell_path }}"
+  when: fish_arm.stat.exists or fish_intel.stat.exists
+  become: true

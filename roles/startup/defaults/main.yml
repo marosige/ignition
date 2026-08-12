@@ -1,0 +1,8 @@
+---
+# Apps to launch at login.
+# Add per-profile overrides in playbooks/profiles/*.yml
+startup_apps:
+  - MonitorControl
+  - Amphetamine
+  - Magnet
+  - logi Options+

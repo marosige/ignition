@@ -1,0 +1,7 @@
+---
+vscode_extensions:
+  - mads-hartmann.bash-ide-vscode   # Bash IDE (autocompletion & linting)
+  - timonwong.shellcheck            # ShellCheck (script errors & best practices)
+  - fwcd.kotlin                     # Kotlin language support
+  - ms-python.python                # Python (linting, IntelliSense, Jupyter)
+  - zhuangtongfa.material-theme     # One Dark Pro theme

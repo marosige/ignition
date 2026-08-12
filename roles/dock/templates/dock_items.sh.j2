@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+dockutil --remove all --no-restart
+
+{% for item in dock_apps %}
+{% if item is mapping and item.spacer is defined %}
+dockutil --add '' --type small-spacer --section apps --no-restart
+{% else %}
+dockutil --add "{{ item }}" --no-restart
+{% endif %}
+{% endfor %}
+
+{% for folder in dock_folders %}
+dockutil --add "{{ folder }}" --view fan --display stack --sort dateadded --no-restart
+{% endfor %}
+
+killall Dock

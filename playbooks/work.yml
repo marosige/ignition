@@ -1,0 +1,4 @@
+---
+- import_playbook: site.yml
+  vars:
+    profile: work

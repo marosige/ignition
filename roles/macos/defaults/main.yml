@@ -1,0 +1,110 @@
+---
+# All macOS system preference values in one place.
+# Change a value here and re-run the playbook to apply it.
+
+# ============================================================ Accessibility
+macos_accessibility_shake_to_locate: true
+macos_accessibility_zoom_on_release: false   # Hold ⌃⌥ for temporary zoom
+macos_accessibility_scroll_zoom: true        # Ctrl+scroll to zoom
+macos_accessibility_smooth_zoom: false
+macos_accessibility_zoom_follows_focus: true
+macos_accessibility_zoom_mode: 0             # 0=Fullscreen, 1=Picture-in-picture
+
+# ================================================================= Date & Time
+macos_datetime_timezone: "Europe/Budapest"
+macos_datetime_network_time: true
+macos_datetime_time_server: "time.apple.com"
+macos_datetime_auto_timezone: true
+macos_datetime_clock_analog: false
+macos_datetime_flash_separators: false
+macos_datetime_format: "MMM d EEE HH:mm"    # e.g. "Aug 10 Sun 14:32"
+
+# =================================================================== Desktop
+macos_desktop_click_to_show: false           # Click wallpaper to reveal desktop
+macos_desktop_icons: true                    # Show icons on desktop
+macos_desktop_hard_drives: false
+macos_desktop_external_drives: true
+macos_desktop_removable_media: true
+macos_desktop_servers: false
+
+# Hot corners (0=none, 2=Mission Control, 4=Desktop, 5=Screen Saver, 10=Sleep, 13=Lock)
+macos_desktop_hot_corner_tl: 0
+macos_desktop_hot_corner_tr: 0
+macos_desktop_hot_corner_bl: 0
+macos_desktop_hot_corner_br: 0
+
+# =================================================================== Displays
+macos_displays_auto_brightness: true
+macos_displays_font_smoothing: 2             # 0=Off, 1=Minimal, 2=Medium, 3=Smoother, 4=Strong
+macos_displays_hidpi: true
+
+# ==================================================================== Finder
+macos_finder_show_all_extensions: true
+macos_finder_show_hidden_files: true
+macos_finder_view_style: "clmv"              # clmv=Column, icnv=Icon, Nlsv=List, Flwv=Gallery
+macos_finder_show_pathbar: true
+macos_finder_warn_on_empty_trash: false
+macos_finder_search_scope: "SCcf"            # SCev=This Mac, SCcf=Current Folder, SCsp=Previous
+macos_finder_new_window_target: "PfHm"       # PfHm=Home, PfDe=Desktop, PfDo=Documents
+macos_finder_sidebar_items:
+  - { name: "Applications", uri: "file:///Applications/" }
+  - { name: "~",            uri: "file:///Users/{{ ansible_user_id }}/" }
+  - { name: "workspace",    uri: "file:///Users/{{ ansible_user_id }}/workspace/" }
+  - { name: "tmp",          uri: "file:///Users/{{ ansible_user_id }}/tmp/" }
+  - { name: "Desktop",      uri: "file:///Users/{{ ansible_user_id }}/Desktop/" }
+  - { name: "Downloads",    uri: "file:///Users/{{ ansible_user_id }}/Downloads/" }
+
+# ================================================================== Keyboard
+macos_keyboard_ui_mode: 1                    # 1=Text boxes & lists only, 3=All controls
+macos_keyboard_fn_state: false               # false=F-keys as standard function keys
+macos_keyboard_autocorrect: false
+macos_keyboard_continuous_spell_check: false
+macos_keyboard_auto_capitalization: false
+macos_keyboard_period_substitution: false
+macos_keyboard_dash_substitution: false
+macos_keyboard_quote_substitution: false
+macos_keyboard_dim_backlight: true
+macos_keyboard_dim_timeout: 300              # Seconds before keyboard dims
+macos_keyboard_press_and_hold: false         # false=key repeat instead of accent picker
+macos_keyboard_key_repeat: 2                 # 2=Fast (range: 2–120)
+macos_keyboard_initial_key_repeat: 15        # 15=Short delay (range: 15–120)
+
+# ================================================================== Menu Bar
+macos_menu_bar_battery_percentage: true
+macos_menu_bar_bluetooth: 18                 # 18=Always show, 8=Show when active
+macos_menu_bar_sound: 18
+macos_menu_bar_text_input: true
+macos_menu_bar_airplay: true
+
+# =========================================================== Mission Control
+macos_mission_control_mru_spaces: false      # Do not auto-rearrange spaces
+macos_mission_control_switch_on_activate: true
+macos_mission_control_spans_displays: false  # Displays have separate spaces
+
+# ================================================================ Notifications
+macos_notifications_banner_time: 2           # Seconds a banner stays on screen
+
+# ==================================================================== Safari
+macos_safari_full_url: true
+
+# ================================================================= Screenshot
+macos_screenshot_show_thumbnail: false
+macos_screenshot_type: "png"
+
+# ================================================================== Security
+macos_security_screensaver_password: true
+macos_security_screensaver_delay: 0          # Seconds before password required (0=immediately)
+macos_security_launch_services_quarantine: false  # Disable "Are you sure?" dialog
+macos_security_firewall: 1                   # 0=Off, 1=On, 2=Block all incoming
+macos_security_allow_signed: true
+
+# ================================================================== Trackpad
+macos_trackpad_scaling: 4.5                  # 0=Slow, 3=Fast, 5=Max
+macos_trackpad_haptic_first: 0               # 0=Light, 1=Medium, 2=Firm
+macos_trackpad_haptic_second: 0
+macos_trackpad_swipe_navigate: true          # Two-finger swipe for back/forward
+
+# ====================================================================== Siri
+macos_siri_voice_feedback: 3                 # 2=On, 3=Off
+macos_siri_hotkey: 0                         # 0=Off, 2=Cmd+Space, 3=Option+Space, 4=Fn+Space
+macos_siri_status_menu: false

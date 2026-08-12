@@ -1,0 +1,8 @@
+---
+- name: "Safari | Show full URL in address bar"
+  community.general.osx_defaults:
+    domain: com.apple.Safari
+    key: ShowFullURLInSmartSearchField
+    type: bool
+    value: "{{ macos_safari_full_url }}"
+  become: true

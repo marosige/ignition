@@ -1,18 +1,60 @@
 # Ignition
-My Personal Computer Setup Tool :rocket:
 
-Say hello to Ignition, my ultimate setup tool! Designed to set up a computer exactly how I like it, Ignition takes care of everything from installing essential applications to configuring preferences and integrating my dotfiles seamlessly. This tool is tailored specifically for my needs, ensuring that every new system is personalized to perfection.
+Personal macOS setup using Ansible + chezmoi.
 
-Currently, Ignition can set up two types of systems: my daily driver macOS, which I use for everyday tasks and work (including android software development), and my homelab setup, which consists of an Ubuntu server running my home server needs.
+## What this does
 
-While Ignition is my go-to setup solution, it's also easily forkable, allowing others to customize it to their preferences. Get ready to experience computing the way I like it with Ignition!
+- Creates directories (`~/workspace`, `~/bin`, `~/tmp`, etc.)
+- Installs packages and apps (Homebrew, Casks, MAS)
+- Applies macOS preferences (Dock, Finder, Keyboard, Trackpad, Security, ...)
+- Configures Dock items
+- Installs VS Code extensions
+- Applies dotfiles through chezmoi
 
-## Usage
+## Setup
 
-**Warning:** Before applying these installs, preferences, and dotfiles, it is strongly recommended to fork this repository, carefully review the code, and remove elements you don't want or need!
-Don’t blindly use my settings unless you know what that entails. Use at your own risk!
+### First run
 
-To initiate the setup process, run the following command in your terminal:
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/marosige/ignition/main/bootstrap.sh)"
+```
 
-    bash -c "$(curl -fsSL https://raw.githubusercontent.com/marosige/ignition/main/download.sh)"
+### Re-run (update + apply changes)
 
+```bash
+bash ~/.ignition/bootstrap.sh
+```
+
+The same script handles both cases — clones on first run, pulls on subsequent runs.
+
+## Daily use
+
+```bash
+bash ~/.ignition/bootstrap.sh
+```
+
+Or directly if you know which profile:
+
+```bash
+cd ~/.ignition && ansible-playbook playbooks/personal.yml
+cd ~/.ignition && ansible-playbook playbooks/personal.yml --check --diff  # dry run
+```
+
+## Structure
+
+- `playbooks/site.yml`: common base playbook
+- `playbooks/personal.yml`: personal wrapper
+- `playbooks/work.yml`: work wrapper
+- `playbooks/profiles/personal.yml`: personal overrides
+- `playbooks/profiles/work.yml`: work overrides
+- `roles/*`: reusable setup roles
+
+## Customize
+
+- Common settings: `roles/*/defaults/main.yml`
+- Personal/work differences: `playbooks/profiles/*.yml`
+
+## Notes
+
+- Repository now contains only the Ansible setup.
+- Personal/work differences live in `playbooks/profiles/*.yml`.

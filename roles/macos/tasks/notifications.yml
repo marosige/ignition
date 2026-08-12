@@ -1,0 +1,7 @@
+---
+- name: "Notifications | Banner display duration"
+  community.general.osx_defaults:
+    domain: com.apple.notificationcenterui
+    key: bannerTime
+    type: int
+    value: "{{ macos_notifications_banner_time }}"

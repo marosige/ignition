@@ -1,0 +1,93 @@
+---
+# ---------------------------------------------------------------- Dock prefs
+- name: "Dock | Icon size"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: tilesize
+    type: int
+    value: "{{ dock_tilesize }}"
+  notify: Restart Dock
+
+- name: "Dock | Magnified icon size"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: largesize
+    type: int
+    value: "{{ dock_largesize }}"
+  notify: Restart Dock
+
+- name: "Dock | Enable magnification"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: magnification
+    type: bool
+    value: "{{ dock_magnification }}"
+  notify: Restart Dock
+
+- name: "Dock | Lock icon size (disable resize arrows)"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: size-immutable
+    type: bool
+    value: "{{ dock_size_immutable }}"
+
+- name: "Dock | Minimize animation"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: mineffect
+    type: string
+    value: "{{ dock_mineffect }}"
+  notify: Restart Dock
+
+- name: "Dock | Show recent apps"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: show-recents
+    type: bool
+    value: "{{ dock_show_recents }}"
+  notify: Restart Dock
+
+- name: "Dock | Scroll up to show app windows"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: scroll-to-open
+    type: bool
+    value: "{{ dock_scroll_to_open }}"
+
+- name: "Dock | Position"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: orientation
+    type: string
+    value: "{{ dock_orientation }}"
+  notify: Restart Dock
+
+- name: "Dock | Show pinned apps only (static-only)"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: static-only
+    type: bool
+    value: "{{ dock_static_only }}"
+  notify: Restart Dock
+
+- name: "Dock | Auto-hide"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: autohide
+    type: bool
+    value: "{{ dock_autohide }}"
+  notify: Restart Dock
+
+# ---------------------------------------------------------------- Dock items
+# Render a shell script and run it so items are added in the exact order defined.
+# (Two separate Ansible loops would add all spacers first, then all apps — wrong order.)
+- name: "Dock | Render items script"
+  ansible.builtin.template:
+    src: dock_items.sh.j2
+    dest: /tmp/ignition_dock_items.sh
+    mode: "0755"
+  changed_when: false
+
+- name: "Dock | Apply items"
+  ansible.builtin.command: bash /tmp/ignition_dock_items.sh
+  changed_when: true

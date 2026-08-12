@@ -1,0 +1,6 @@
+---
+# Ansible collections required by this project.
+# Install with: ansible-galaxy collection install -r requirements.yml
+collections:
+  - name: community.general
+    version: ">=9.0.0"

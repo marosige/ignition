@@ -1,0 +1,16 @@
+---
+# Dock appearance preferences
+dock_tilesize: 32
+dock_largesize: 48
+dock_magnification: true
+dock_size_immutable: true
+dock_mineffect: "scale"
+dock_show_recents: false
+dock_scroll_to_open: true
+dock_orientation: "bottom"
+dock_static_only: false
+dock_autohide: false
+
+# App lists — override these in the playbook vars
+dock_apps: []
+dock_folders: []

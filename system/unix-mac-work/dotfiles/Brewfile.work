@@ -1,6 +1,0 @@
-# Work
-cask "microsoft-teams" # Meet, chat, call, and collaborate in just one place
-cask "microsoft-office" # Office suite
-cask "adobe-acrobat-reader" # View, print, and comment on PDF documents
-cask "figma" # Design tool for UI/UX
-mas "Xcode", id: 497799835

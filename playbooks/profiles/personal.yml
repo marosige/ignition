@@ -1,0 +1,52 @@
+---
+dock_apps:
+  # Finder is always first (added by macOS automatically)
+  - { spacer: true }
+  - /Applications/Google Chrome.app
+  - /Applications/ChatGPT.app
+  - /Applications/YT Music.app
+  - { spacer: true }
+  - /Applications/Messenger.app
+  - /System/Applications/Messages.app
+  - /Applications/WhatsApp.app
+  - /Applications/Slack.app
+  - { spacer: true }
+  - /System/Applications/Calendar.app
+  - /System/Applications/Reminders.app
+  - /System/Applications/Notes.app
+  - /System/Applications/Passwords.app
+  - /System/Applications/Utilities/Screenshot.app
+  - { spacer: true }
+  - /System/Applications/Utilities/Terminal.app
+  - /Applications/Fork.app
+  - /Applications/Visual Studio Code.app
+  - /Applications/Android Studio.app
+  - { spacer: true }
+
+dock_folders:
+  - "{{ ansible_env.HOME }}/Downloads"
+
+startup_apps:
+  - MonitorControl
+  - Amphetamine
+  - Magnet
+  - logi Options+
+
+homebrew_extra_packages: []
+homebrew_extra_casks:
+  - messenger
+  - whatsapp
+  - slack
+  - discord
+  - zoom
+  - skype
+  - audacity
+  - sweet-home3d
+  - balenaetcher
+  - philips-hue-sync
+  - ukelele
+  - coconutbattery
+  - 8bitdo-ultimate-software
+
+homebrew_extra_mas_apps:
+  - { id: 408981434, name: "iMovie" }

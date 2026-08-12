@@ -1,0 +1,37 @@
+---
+- name: "Security | Require password on wake"
+  community.general.osx_defaults:
+    domain: com.apple.screensaver
+    key: askForPassword
+    type: bool
+    value: "{{ macos_security_screensaver_password }}"
+
+- name: "Security | Password delay after sleep"
+  community.general.osx_defaults:
+    domain: com.apple.screensaver
+    key: askForPasswordDelay
+    type: int
+    value: "{{ macos_security_screensaver_delay }}"
+
+- name: "Security | Disable 'Are you sure you want to open this?' dialog"
+  community.general.osx_defaults:
+    domain: com.apple.LaunchServices
+    key: LSQuarantine
+    type: bool
+    value: "{{ macos_security_launch_services_quarantine }}"
+
+- name: "Security | Enable firewall"
+  community.general.osx_defaults:
+    domain: /Library/Preferences/com.apple.alf
+    key: globalstate
+    type: int
+    value: "{{ macos_security_firewall }}"
+  become: true
+
+- name: "Security | Allow signed apps through firewall"
+  community.general.osx_defaults:
+    domain: /Library/Preferences/com.apple.alf
+    key: allowsignedenabled
+    type: bool
+    value: "{{ macos_security_allow_signed }}"
+  become: true

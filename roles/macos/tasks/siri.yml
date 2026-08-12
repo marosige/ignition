@@ -1,0 +1,28 @@
+---
+- name: "Siri | Enable/disable Siri"
+  community.general.osx_defaults:
+    domain: com.apple.assistant.support
+    key: "Assistant Enabled"
+    type: bool
+    value: false
+
+- name: "Siri | Voice feedback"
+  community.general.osx_defaults:
+    domain: com.apple.assistant.backedup
+    key: "Use device speaker for TTS"
+    type: int
+    value: "{{ macos_siri_voice_feedback }}"
+
+- name: "Siri | Keyboard shortcut"
+  community.general.osx_defaults:
+    domain: com.apple.Siri
+    key: HotkeyTag
+    type: int
+    value: "{{ macos_siri_hotkey }}"
+
+- name: "Siri | Show in menu bar"
+  community.general.osx_defaults:
+    domain: com.apple.Siri
+    key: StatusMenuVisible
+    type: bool
+    value: "{{ macos_siri_status_menu }}"

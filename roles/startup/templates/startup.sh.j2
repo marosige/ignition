@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Managed by Ignition — do not edit manually.
+# Change startup_apps in roles/startup/defaults/main.yml and re-run the playbook.
+
+sleep 5  # Wait for macOS services to be ready
+
+{% for app in startup_apps %}
+open -a "{{ app }}" 2>/dev/null
+{% endfor %}
+
+# Close any open Finder windows that appeared on login
+sleep 10
+osascript -e 'tell application "Finder" to close every window'

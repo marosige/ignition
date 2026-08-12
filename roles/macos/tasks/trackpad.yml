@@ -1,0 +1,26 @@
+---
+- name: "Trackpad | Tracking speed"
+  community.general.osx_defaults:
+    key: com.apple.trackpad.scaling
+    type: float
+    value: "{{ macos_trackpad_scaling }}"
+
+- name: "Trackpad | Haptic feedback strength (first click)"
+  community.general.osx_defaults:
+    domain: com.apple.AppleMultitouchTrackpad
+    key: FirstClickThreshold
+    type: int
+    value: "{{ macos_trackpad_haptic_first }}"
+
+- name: "Trackpad | Haptic feedback strength (second click)"
+  community.general.osx_defaults:
+    domain: com.apple.AppleMultitouchTrackpad
+    key: SecondClickThreshold
+    type: int
+    value: "{{ macos_trackpad_haptic_second }}"
+
+- name: "Trackpad | Two-finger swipe for back/forward"
+  community.general.osx_defaults:
+    key: AppleEnableSwipeNavigateWithScrolls
+    type: bool
+    value: "{{ macos_trackpad_swipe_navigate }}"

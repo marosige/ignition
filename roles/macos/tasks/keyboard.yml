@@ -1,0 +1,117 @@
+---
+- name: "Keyboard | Full keyboard access (Tab key focus)"
+  community.general.osx_defaults:
+    key: AppleKeyboardUIMode
+    type: int
+    value: "{{ macos_keyboard_ui_mode }}"
+
+- name: "Keyboard | Use F-keys as standard function keys"
+  community.general.osx_defaults:
+    key: com.apple.keyboard.fnState
+    type: bool
+    value: "{{ macos_keyboard_fn_state }}"
+
+- name: "Keyboard | Autocorrect spelling"
+  community.general.osx_defaults:
+    key: NSAutomaticSpellingCorrectionEnabled
+    type: bool
+    value: "{{ macos_keyboard_autocorrect }}"
+
+- name: "Keyboard | Continuous spell checking"
+  community.general.osx_defaults:
+    key: NSAllowContinuousSpellChecking
+    type: bool
+    value: "{{ macos_keyboard_continuous_spell_check }}"
+
+- name: "Keyboard | Auto capitalization"
+  community.general.osx_defaults:
+    key: NSAutomaticCapitalizationEnabled
+    type: bool
+    value: "{{ macos_keyboard_auto_capitalization }}"
+
+- name: "Keyboard | Automatic period substitution"
+  community.general.osx_defaults:
+    key: NSAutomaticPeriodSubstitutionEnabled
+    type: bool
+    value: "{{ macos_keyboard_period_substitution }}"
+
+- name: "Keyboard | Smart dashes"
+  community.general.osx_defaults:
+    key: NSAutomaticDashSubstitutionEnabled
+    type: bool
+    value: "{{ macos_keyboard_dash_substitution }}"
+
+- name: "Keyboard | Smart quotes"
+  community.general.osx_defaults:
+    key: NSAutomaticQuoteSubstitutionEnabled
+    type: bool
+    value: "{{ macos_keyboard_quote_substitution }}"
+
+- name: "Keyboard | Dim backlight in low light"
+  community.general.osx_defaults:
+    domain: com.apple.BezelServices
+    key: kDim
+    type: bool
+    value: "{{ macos_keyboard_dim_backlight }}"
+
+- name: "Keyboard | Dim backlight in low light (system pref)"
+  community.general.osx_defaults:
+    domain: /Library/Preferences/com.apple.iokit.AmbientLightSensor
+    key: "Automatic Keyboard Enabled"
+    type: bool
+    value: "{{ macos_keyboard_dim_backlight }}"
+  become: true
+
+- name: "Keyboard | Backlight dim timeout"
+  community.general.osx_defaults:
+    domain: com.apple.BezelServices
+    key: kDimTime
+    type: int
+    value: "{{ macos_keyboard_dim_timeout }}"
+
+- name: "Keyboard | Backlight dim timeout (system pref)"
+  community.general.osx_defaults:
+    domain: /Library/Preferences/com.apple.iokit.AmbientLightSensor
+    key: "Keyboard Dim Time"
+    type: int
+    value: "{{ macos_keyboard_dim_timeout }}"
+  become: true
+
+- name: "Keyboard | Enable key repeat (disable press-and-hold)"
+  community.general.osx_defaults:
+    key: ApplePressAndHoldEnabled
+    type: bool
+    value: "{{ macos_keyboard_press_and_hold }}"
+
+- name: "Keyboard | Key repeat rate"
+  community.general.osx_defaults:
+    key: KeyRepeat
+    type: int
+    value: "{{ macos_keyboard_key_repeat }}"
+
+- name: "Keyboard | Initial key repeat delay"
+  community.general.osx_defaults:
+    key: InitialKeyRepeat
+    type: int
+    value: "{{ macos_keyboard_initial_key_repeat }}"
+
+# ------------------------------------------ Custom keyboard layout (en_hu)
+- name: "Keyboard | Install en_hu keyboard layout"
+  ansible.builtin.copy:
+    src: en_hu.keylayout
+    dest: /Library/Keyboard Layouts/en_hu.keylayout
+    mode: "0644"
+  become: true
+
+- name: "Keyboard | Remove default input sources"
+  ansible.builtin.command: defaults delete com.apple.HIToolbox AppleEnabledInputSources
+  changed_when: false
+  failed_when: false
+
+- name: "Keyboard | Register en_hu input source"
+  ansible.builtin.command: >
+    defaults write com.apple.HIToolbox AppleEnabledInputSources -array-add
+    '<dict><key>InputSourceKind</key><string>Keyboard Layout</string>
+    <key>KeyboardLayout ID</key><integer>1111</integer>
+    <key>KeyboardLayout Name</key><string>en_hu</string></dict>'
+  changed_when: true

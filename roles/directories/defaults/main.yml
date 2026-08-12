@@ -1,0 +1,9 @@
+---
+directories:
+  - "{{ ansible_env.HOME }}/bin"
+  - "{{ ansible_env.HOME }}/tmp"
+  - "{{ ansible_env.HOME }}/workspace"
+  - "{{ ansible_env.HOME }}/workspace/work"
+  - "{{ ansible_env.HOME }}/workspace/personal"
+  - "{{ ansible_env.HOME }}/workspace/playground"
+  - "{{ ansible_env.HOME }}/workspace/third"

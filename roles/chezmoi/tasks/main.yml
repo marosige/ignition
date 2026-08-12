@@ -1,0 +1,15 @@
+---
+- name: "chezmoi | Check if initialized"
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.local/share/chezmoi"
+  register: chezmoi_state
+
+- name: "chezmoi | Initialize from repo"
+  ansible.builtin.command: |
+    chezmoi init --apply {{ chezmoi_dotfiles_repo }}
+  when: not chezmoi_state.stat.exists
+  changed_when: true
+
+- name: "chezmoi | Apply dotfiles"
+  ansible.builtin.command: chezmoi apply --force
+  changed_when: false

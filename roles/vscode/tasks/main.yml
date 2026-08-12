@@ -1,0 +1,6 @@
+---
+- name: "VS Code | Install extensions"
+  ansible.builtin.command: code --install-extension "{{ item }}"
+  loop: "{{ vscode_extensions }}"
+  changed_when: false
+  failed_when: false

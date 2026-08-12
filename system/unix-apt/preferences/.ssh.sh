@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-[ -z "$IGNITION_ROOT" ] && source ~/.ignition/ignition/bootstrap.sh
-
-###############################################################################
-# Configuring SSH
-###############################################################################
-
-echo -e "$IGNITION_TASK Enabling and starting OpenSSH..."
-systemctl enable --now ssh

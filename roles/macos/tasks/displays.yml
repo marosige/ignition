@@ -1,0 +1,29 @@
+---
+- name: "Displays | Automatically adjust brightness"
+  community.general.osx_defaults:
+    domain: com.apple.BezelServices
+    key: dAuto
+    type: bool
+    value: "{{ macos_displays_auto_brightness }}"
+
+- name: "Displays | Automatically adjust brightness (system pref)"
+  community.general.osx_defaults:
+    domain: /Library/Preferences/com.apple.iokit.AmbientLightSensor
+    key: "Automatic Display Enabled"
+    type: bool
+    value: "{{ macos_displays_auto_brightness }}"
+  become: true
+
+- name: "Displays | Subpixel font rendering"
+  community.general.osx_defaults:
+    key: AppleFontSmoothing
+    type: int
+    value: "{{ macos_displays_font_smoothing }}"
+
+- name: "Displays | Enable HiDPI display modes"
+  community.general.osx_defaults:
+    domain: /Library/Preferences/com.apple.windowserver
+    key: DisplayResolutionEnabled
+    type: bool
+    value: "{{ macos_displays_hidpi }}"
+  become: true

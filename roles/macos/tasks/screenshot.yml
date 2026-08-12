@@ -1,0 +1,14 @@
+---
+- name: "Screenshot | Show thumbnail after capture"
+  community.general.osx_defaults:
+    domain: com.apple.screencapture
+    key: show-thumbnail
+    type: bool
+    value: "{{ macos_screenshot_show_thumbnail }}"
+
+- name: "Screenshot | File format"
+  community.general.osx_defaults:
+    domain: com.apple.screencapture
+    key: type
+    type: string
+    value: "{{ macos_screenshot_type }}"

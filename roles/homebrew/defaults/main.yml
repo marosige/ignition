@@ -1,0 +1,50 @@
+---
+# Base Homebrew packages installed on every Mac.
+# Add machine-specific packages via homebrew_extra_* in the playbook vars.
+
+homebrew_packages:
+  # Ignition dependencies
+  - mas         # Mac App Store CLI
+  - dockutil    # Dock management
+  - gum         # TUI components for shell scripts
+  - chezmoi     # Dotfile manager
+  # CLI
+  - bash        # Updated Bash 5+ (Apple ships an outdated version)
+  - fish        # User-friendly shell
+  - midnight-commander
+  - tldr
+  - tree
+  - wget
+  - imagemagick
+  - ffmpeg
+  - yt-dlp
+  - speedtest-cli
+  - btop
+  - neofetch
+  # Development
+  - git
+  - git-lfs
+
+homebrew_casks:
+  - mysides             # Finder sidebar management
+  - fork                # Git client
+  - visual-studio-code
+  - android-studio
+  - temurin             # JDK for Gradle-based Android projects
+  - the-unarchiver
+  - android-file-transfer
+  - google-chrome
+  - yt-music
+  - monitorcontrol      # External monitor brightness & volume
+  - chatgpt
+  - logi-options+
+  - appcleaner
+
+homebrew_mas_apps:
+  - { id: 441258766, name: "Magnet" }
+  - { id: 937984704, name: "Amphetamine" }
+
+# Extend these in playbook vars (personal.yml / work.yml)
+homebrew_extra_packages: []
+homebrew_extra_casks: []
+homebrew_extra_mas_apps: []

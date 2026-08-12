@@ -1,0 +1,21 @@
+---
+- name: "Mission Control | Do not auto-rearrange spaces"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: mru-spaces
+    type: bool
+    value: "{{ macos_mission_control_mru_spaces }}"
+  notify: Restart Dock
+
+- name: "Mission Control | Switch to space with open windows on app activate"
+  community.general.osx_defaults:
+    key: AppleSpacesSwitchOnActivate
+    type: bool
+    value: "{{ macos_mission_control_switch_on_activate }}"
+
+- name: "Mission Control | Displays have separate spaces"
+  community.general.osx_defaults:
+    domain: com.apple.spaces
+    key: spans-displays
+    type: bool
+    value: "{{ macos_mission_control_spans_displays }}"

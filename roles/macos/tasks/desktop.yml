@@ -1,0 +1,64 @@
+---
+- name: "Desktop | Click wallpaper to reveal desktop"
+  community.general.osx_defaults:
+    domain: com.apple.WindowManager
+    key: EnableStandardClickToShowDesktop
+    type: bool
+    value: "{{ macos_desktop_click_to_show }}"
+
+- name: "Desktop | Show icons on desktop"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: CreateDesktop
+    type: bool
+    value: "{{ macos_desktop_icons }}"
+  notify: Restart Finder
+
+- name: "Desktop | Show hard drives on desktop"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: ShowHardDrivesOnDesktop
+    type: bool
+    value: "{{ macos_desktop_hard_drives }}"
+  notify: Restart Finder
+
+- name: "Desktop | Show external drives on desktop"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: ShowExternalHardDrivesOnDesktop
+    type: bool
+    value: "{{ macos_desktop_external_drives }}"
+  notify: Restart Finder
+
+- name: "Desktop | Show removable media on desktop"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: ShowRemovableMediaOnDesktop
+    type: bool
+    value: "{{ macos_desktop_removable_media }}"
+  notify: Restart Finder
+
+- name: "Desktop | Show mounted servers on desktop"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: ShowMountedServersOnDesktop
+    type: bool
+    value: "{{ macos_desktop_servers }}"
+  notify: Restart Finder
+
+- name: "Desktop | Hot corners"
+  community.general.osx_defaults:
+    domain: com.apple.dock
+    key: "{{ item.key }}"
+    type: int
+    value: "{{ item.value }}"
+  loop:
+    - { key: wvous-tl-corner,   value: "{{ macos_desktop_hot_corner_tl }}" }
+    - { key: wvous-tr-corner,   value: "{{ macos_desktop_hot_corner_tr }}" }
+    - { key: wvous-bl-corner,   value: "{{ macos_desktop_hot_corner_bl }}" }
+    - { key: wvous-br-corner,   value: "{{ macos_desktop_hot_corner_br }}" }
+    - { key: wvous-tl-modifier, value: 0 }
+    - { key: wvous-tr-modifier, value: 0 }
+    - { key: wvous-bl-modifier, value: 0 }
+    - { key: wvous-br-modifier, value: 0 }
+  notify: Restart Dock

@@ -1,0 +1,80 @@
+---
+- name: "Finder | Show all file extensions"
+  community.general.osx_defaults:
+    key: AppleShowAllExtensions
+    type: bool
+    value: "{{ macos_finder_show_all_extensions }}"
+  notify: Restart Finder
+
+- name: "Finder | Show hidden files"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: AppleShowAllFiles
+    type: bool
+    value: "{{ macos_finder_show_hidden_files }}"
+  notify: Restart Finder
+
+- name: "Finder | Default view style"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: FXPreferredViewStyle
+    type: string
+    value: "{{ macos_finder_view_style }}"
+  notify: Restart Finder
+
+- name: "Finder | Show path bar"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: ShowPathbar
+    type: bool
+    value: "{{ macos_finder_show_pathbar }}"
+  notify: Restart Finder
+
+- name: "Finder | Warn before emptying Trash"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: WarnOnEmptyTrash
+    type: bool
+    value: "{{ macos_finder_warn_on_empty_trash }}"
+
+- name: "Finder | Default search scope"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: FXDefaultSearchScope
+    type: string
+    value: "{{ macos_finder_search_scope }}"
+
+- name: "Finder | New window opens at home folder"
+  community.general.osx_defaults:
+    domain: com.apple.finder
+    key: NewWindowTarget
+    type: string
+    value: "{{ macos_finder_new_window_target }}"
+  notify: Restart Finder
+
+- name: "Finder | Avoid .DS_Store on network volumes"
+  community.general.osx_defaults:
+    domain: com.apple.desktopservices
+    key: DSDontWriteNetworkStores
+    type: bool
+    value: true
+
+- name: "Finder | Avoid .DS_Store on USB volumes"
+  community.general.osx_defaults:
+    domain: com.apple.desktopservices
+    key: DSDontWriteUSBStores
+    type: bool
+    value: true
+
+- name: "Finder | Show ~/Library folder"
+  ansible.builtin.command: chflags nohidden "{{ ansible_env.HOME }}/Library"
+  changed_when: false
+
+- name: "Finder | Clear sidebar"
+  ansible.builtin.command: mysides remove all
+  changed_when: true
+
+- name: "Finder | Add sidebar items"
+  ansible.builtin.command: mysides add "{{ item.name }}" "{{ item.uri }}"
+  loop: "{{ macos_finder_sidebar_items }}"
+  changed_when: true

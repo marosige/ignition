@@ -1,0 +1,54 @@
+---
+- name: "Accessibility | Shake mouse cursor to locate"
+  community.general.osx_defaults:
+    key: CGDisableCursorLocationMagnification
+    type: bool
+    value: "{{ macos_accessibility_shake_to_locate }}"
+
+- name: "Accessibility | Hold ⌃⌥ for temporary zoom (press-on-release off)"
+  community.general.osx_defaults:
+    domain: com.apple.universalaccess
+    key: closeViewPressOnReleaseOff
+    type: bool
+    value: "{{ not macos_accessibility_zoom_on_release }}"
+  become: true
+
+- name: "Accessibility | Zoom with Ctrl+scroll"
+  community.general.osx_defaults:
+    domain: com.apple.universalaccess
+    key: closeViewScrollWheelToggle
+    type: bool
+    value: "{{ macos_accessibility_scroll_zoom }}"
+  become: true
+
+- name: "Accessibility | Zoom modifier key (Ctrl=262144)"
+  community.general.osx_defaults:
+    domain: com.apple.universalaccess
+    key: HIDScrollZoomModifierMask
+    type: int
+    value: 262144
+  become: true
+
+- name: "Accessibility | Smooth zoomed images"
+  community.general.osx_defaults:
+    domain: com.apple.universalaccess
+    key: closeViewSmoothImages
+    type: bool
+    value: "{{ macos_accessibility_smooth_zoom }}"
+  become: true
+
+- name: "Accessibility | Zoom follows keyboard focus"
+  community.general.osx_defaults:
+    domain: com.apple.universalaccess
+    key: closeViewZoomFollowsFocus
+    type: bool
+    value: "{{ macos_accessibility_zoom_follows_focus }}"
+  become: true
+
+- name: "Accessibility | Zoom style"
+  community.general.osx_defaults:
+    domain: com.apple.universalaccess
+    key: closeViewZoomMode
+    type: int
+    value: "{{ macos_accessibility_zoom_mode }}"
+  become: true

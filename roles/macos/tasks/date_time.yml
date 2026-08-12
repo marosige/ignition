@@ -1,0 +1,44 @@
+---
+- name: "Date & Time | Set timezone"
+  ansible.builtin.command: systemsetup -settimezone "{{ macos_datetime_timezone }}"
+  become: true
+  changed_when: false
+
+- name: "Date & Time | Use network time"
+  ansible.builtin.command: systemsetup -setusingnetworktime on
+  become: true
+  changed_when: false
+
+- name: "Date & Time | Set time server"
+  ansible.builtin.command: systemsetup -setnetworktimeserver "{{ macos_datetime_time_server }}"
+  become: true
+  changed_when: false
+
+- name: "Date & Time | Set timezone automatically using location"
+  community.general.osx_defaults:
+    domain: /Library/Preferences/com.apple.timezone.auto.plist
+    key: Active
+    type: bool
+    value: "{{ macos_datetime_auto_timezone }}"
+  become: true
+
+- name: "Date & Time | Clock type (digital/analog)"
+  community.general.osx_defaults:
+    domain: com.apple.menuextra.clock
+    key: IsAnalog
+    type: bool
+    value: "{{ macos_datetime_clock_analog }}"
+
+- name: "Date & Time | Flashing date separators"
+  community.general.osx_defaults:
+    domain: com.apple.menuextra.clock
+    key: FlashDateSeparators
+    type: bool
+    value: "{{ macos_datetime_flash_separators }}"
+
+- name: "Date & Time | Clock format"
+  community.general.osx_defaults:
+    domain: com.apple.menuextra.clock
+    key: DateFormat
+    type: string
+    value: "{{ macos_datetime_format }}"
