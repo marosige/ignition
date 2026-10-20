@@ -40,9 +40,16 @@ cd "$IGNITION_ROOT"
 if ! command -v brew &>/dev/null; then
   task "Installing Homebrew..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || fail "Homebrew install failed"
-  # Make brew available in this session (Apple Silicon path)
-  [[ -f /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
   ok "Homebrew installed"
+fi
+
+# The installer updates future shells; load Homebrew into this shell as well.
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -x /usr/local/bin/brew ]]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+elif ! command -v brew &>/dev/null; then
+  fail "Homebrew was installed but could not be found"
 fi
 
 # ── 3. Install Ansible ───────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
 ---
 - import_playbook: site.yml
   vars:
-    profile: personal
+    target_group: personal

@@ -1,5 +1,0 @@
----
-# Shared variables for all machines.
-# Override specific values in playbooks/personal.yml or playbooks/work.yml.
-
-ignition_root: "{{ lookup('env', 'HOME') }}/.ignition"

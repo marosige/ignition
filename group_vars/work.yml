@@ -1,22 +1,37 @@
 ---
+homebrew_extra_packages: []
+
+homebrew_extra_casks:
+  - microsoft-teams       # Team communication
+  - microsoft-office      # Office suite
+  - adobe-acrobat-reader  # PDF viewer
+  - figma                 # Design tool
+
+homebrew_extra_mas_apps:
+  - { id: 497799835, name: "Xcode" } # Apple development tools
+
+# Finder is always first (added by macOS automatically).
 dock_apps:
-  # Finder is always first (added by macOS automatically)
   - { spacer: true }
+  # Web
   - /Applications/Google Chrome.app
   - /Applications/ChatGPT.app
   - /Applications/YT Music.app
   - { spacer: true }
+  # Productivity
   - /System/Applications/Calendar.app
   - /System/Applications/Reminders.app
   - /System/Applications/Notes.app
   - /System/Applications/Passwords.app
   - /System/Applications/Utilities/Screenshot.app
   - { spacer: true }
+  # Telekom
   - /Applications/Cisco/Cisco Secure Client.app
   - /Applications/Figma.app
   - /Applications/Microsoft Outlook.app
   - /Applications/Microsoft Teams.app
   - { spacer: true }
+  # Development
   - /System/Applications/Utilities/Terminal.app
   - /Applications/Fork.app
   - /Applications/Visual Studio Code.app
@@ -26,18 +41,5 @@ dock_apps:
 dock_folders:
   - "{{ ansible_env.HOME }}/Downloads"
 
-startup_apps:
-  - MonitorControl
-  - Amphetamine
-  - Magnet
-  - logi Options+
-
-homebrew_extra_packages: []
-homebrew_extra_casks:
-  - microsoft-teams
-  - microsoft-office
-  - adobe-acrobat-reader
-  - figma
-
-homebrew_extra_mas_apps:
-  - { id: 497799835, name: "Xcode" }
+startup_extra_apps:
+  - Identity Agent.app

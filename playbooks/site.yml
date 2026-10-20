@@ -1,15 +1,14 @@
 ---
 - name: Ignition Setup
-  hosts: localhost
-  vars:
-    profile: personal
-  vars_files:
-    - "profiles/{{ profile }}.yml"
+  hosts: "{{ target_group }}"
 
   roles:
-    - directories
+    # Requirements
     - homebrew
+    - directories
     - shell
+
+    # Configuration
     - macos
     - dock
     - startup

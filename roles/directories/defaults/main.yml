@@ -1,9 +1,9 @@
 ---
 directories:
-  - "{{ ansible_env.HOME }}/bin"
-  - "{{ ansible_env.HOME }}/tmp"
-  - "{{ ansible_env.HOME }}/workspace"
-  - "{{ ansible_env.HOME }}/workspace/work"
-  - "{{ ansible_env.HOME }}/workspace/personal"
-  - "{{ ansible_env.HOME }}/workspace/playground"
-  - "{{ ansible_env.HOME }}/workspace/third"
+  - "{{ ansible_env.HOME }}/bin"                 # Personal scripts
+  - "{{ ansible_env.HOME }}/tmp"                 # Temporary files
+  - "{{ ansible_env.HOME }}/workspace"           # Git repositories
+  - "{{ ansible_env.HOME }}/workspace/work"      # Work projects
+  - "{{ ansible_env.HOME }}/workspace/personal"  # Personal projects
+  - "{{ ansible_env.HOME }}/workspace/playground" # Experiments
+  - "{{ ansible_env.HOME }}/workspace/third"     # Third-party sources

@@ -4,7 +4,7 @@
 
 sleep 5  # Wait for macOS services to be ready
 
-{% for app in startup_apps %}
+{% for app in startup_apps + startup_extra_apps %}
 open -a "{{ app }}" 2>/dev/null
 {% endfor %}
 
