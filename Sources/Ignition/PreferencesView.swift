@@ -157,7 +157,7 @@ struct OriginPills: View {
         ForEach(Array(origins.enumerated()), id: \.element.id) { index, origin in
             let winner = index == origins.count - 1
             pill(
-                multiple ? "\(origin.profile.capitalized): \(state.formatted(def, origin.value))" : "Saved · \(origin.profile.capitalized)",
+                multiple ? "\(origin.profile.capitalized): \(state.formatted(def, origin.value))" : origin.profile.capitalized,
                 color: winner ? .accentColor : .secondary,
                 strike: multiple && !winner)
                 .help(multiple
