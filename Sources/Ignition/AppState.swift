@@ -13,6 +13,12 @@ struct PrefOrigin: Identifiable {
 @MainActor
 final class AppState: ObservableObject {
     @Published var destination: Destination? = .overview
+    /// Detail pages pushed inside a section (e.g. a Homebrew package).
+    @Published var path: [BrewPackage] = []
+    @Published var showConnection = false
+    @Published var checking = false
+    private var history: [Destination] = [.overview]
+    private var historyIndex = 0
     @Published var device: DeviceConfig
     @Published var profiles: [String: Profile] = [:]
     @Published var committed: [String: Profile] = [:]
@@ -40,6 +46,33 @@ final class AppState: ObservableObject {
         self.connected = FileManager.default.fileExists(atPath: AppPaths.repo.appendingPathComponent(".git").path)
         reloadProfiles()
         refreshLive()
+    }
+
+    // MARK: Navigation
+
+    var canGoBack: Bool { !path.isEmpty || historyIndex > 0 }
+    var canGoForward: Bool { historyIndex < history.count - 1 }
+
+    func navigate(to new: Destination?) {
+        guard let new, new != destination else { return }
+        history = Array(history.prefix(historyIndex + 1)) + [new]
+        historyIndex = history.count - 1
+        path = []
+        destination = new
+    }
+
+    func goBack() {
+        if !path.isEmpty { path.removeLast(); return }
+        guard historyIndex > 0 else { return }
+        historyIndex -= 1
+        destination = history[historyIndex]
+    }
+
+    func goForward() {
+        guard canGoForward else { return }
+        historyIndex += 1
+        path = []
+        destination = history[historyIndex]
     }
 
     // MARK: Profiles
@@ -77,6 +110,13 @@ final class AppState: ObservableObject {
         profiles[slug] = Profile(title: name)
         persist(slug)
         profileNames = ConfigStore.profileNames()
+    }
+
+    func deleteProfile(_ name: String) {
+        guard name != "base" else { return }
+        do { try ConfigStore.deleteProfile(name) } catch { errorMessage = error.localizedDescription }
+        device.activeProfiles.removeAll { $0 == name }
+        reloadProfiles()
     }
 
     func toggleActive(_ name: String) {
@@ -215,6 +255,8 @@ final class AppState: ObservableObject {
     /// Compares with GitHub (fetches) and refreshes what each setting says about being saved.
     func checkSync(fetch: Bool = true) async {
         guard connected, let sync else { syncInfo = nil; return }
+        checking = true
+        defer { checking = false }
         let names = profileNames
         let folder = AppPaths.normalizeFolder(device.configFolder)
         let result = await Task.detached(priority: .utility) { () -> (SyncInfo, [String], [String: Profile]) in
@@ -251,7 +293,7 @@ final class AppState: ObservableObject {
 
     /// The one button: does whatever the current state needs.
     func syncPrimary() async {
-        guard sync != nil else { destination = .sync; return }
+        guard sync != nil, connected else { navigate(to: .sync); showConnection = true; return }
         guard let info = syncInfo else { await checkSync(); return }
         switch info.kind {
         case .conflict: showConflicts = true

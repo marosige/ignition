@@ -84,7 +84,7 @@ struct OverviewView: View {
         .glassEffect(.regular, in: .rect(cornerRadius: 18))
         return Group {
             if let goTo {
-                Button { state.destination = goTo } label: { content }
+                Button { state.navigate(to: goTo) } label: { content }
                     .buttonStyle(.plain)
                     .contentShape(.rect(cornerRadius: 18))
             } else {

@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import IgnitionCore
 
 private let relative: RelativeDateTimeFormatter = {
@@ -11,67 +12,110 @@ func ago(_ date: Date) -> String { relative.localizedString(for: date, relativeT
 
 struct SyncView: View {
     @EnvironmentObject var state: AppState
-    @State private var showAdvanced = false
 
     var body: some View {
         Form {
             Section { StatusCard() }
-
             if !state.changedFiles.isEmpty {
                 Section("Changes (\(state.changedFiles.count))") {
                     ForEach(state.changedFiles, id: \.self) { Text($0).font(.caption.monospaced()).lineLimit(1) }
                 }
             }
-
-            Section {
-                TextField("Repository", text: $state.device.repository, prompt: Text("owner/repo or GitHub URL"))
-                SecureField("Fine-grained personal access token", text: $state.token)
-                TextField("Device name", text: $state.device.deviceName, prompt: Text("Mac mini"))
-                DisclosureGroup("Advanced", isExpanded: $showAdvanced) {
-                    TextField("Config folder in the repo", text: $state.device.configFolder, prompt: Text("ignition"))
-                    TextField("Branch", text: $state.device.branch, prompt: Text("Repository default"))
-                    Text("A branch that does not exist yet is created on the first save.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                HStack {
-                    Button(state.connected ? "Reconnect" : "Connect") { Task { await state.connect() } }
-                        .buttonStyle(.glassProminent)
-                        .disabled(state.busy)
-                }
-            } header: {
-                Text("Connection")
-            } footer: {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("The token needs access to this one repository with Contents: Read and write. It is stored in your Keychain. The device name appears in every commit, so you can see which Mac changed what.")
-                    Text("Tip: save it in your password manager (username = repository, password = token) so it autofills on every device.")
-                }
-            }
-
-            if !state.commits.isEmpty {
-                Section("History") {
-                    ForEach(state.commits, id: \.self) { Text($0).font(.caption.monospaced()).lineLimit(1) }
-                }
-            }
-
-            Section("Profiles on this Mac") {
-                ForEach(state.profileNames, id: \.self) { name in
-                    Toggle(isOn: Binding(get: { state.device.activeProfiles.contains(name) }, set: { _ in state.toggleActive(name) })) {
-                        VStack(alignment: .leading) {
-                            Text(name.capitalized)
-                            Text(name == "base" ? "Shared by every Mac" : "Layered on top of Base").font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    .disabled(name == "base")
-                }
-                NewProfileRow()
-            }
         }
         .formStyle(.grouped)
         .navigationTitle("GitHub Sync")
-        .onChange(of: state.device.deviceName) { _, _ in state.saveDevice() }
-        .onChange(of: state.device.configFolder) { _, _ in state.saveDevice() }
-        .onChange(of: state.device.branch) { _, _ in state.saveDevice() }
         .task { await state.checkSync() }
+    }
+}
+
+// MARK: - Connection (rarely touched, so it lives behind the gear)
+
+struct ConnectionSheet: View {
+    @EnvironmentObject var state: AppState
+    @Environment(\.dismiss) private var dismiss
+    @State private var showAdvanced = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    TextField("Repository", text: $state.device.repository, prompt: Text("owner/repo or GitHub URL"))
+                    SecureField("Fine-grained personal access token", text: $state.token)
+                    TextField("Device name", text: $state.device.deviceName, prompt: Text("Mac mini"))
+                    DisclosureGroup("Advanced", isExpanded: $showAdvanced) {
+                        TextField("Config folder in the repo", text: $state.device.configFolder, prompt: Text("ignition"))
+                        TextField("Branch", text: $state.device.branch, prompt: Text("Repository default"))
+                        Text("A branch that does not exist yet is created on the first save.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("GitHub connection")
+                } footer: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("The token needs access to this one repository with Contents: Read and write. It is stored in your Keychain. The device name appears in every commit, so you can see which Mac changed what.")
+                        Text("Tip: save it in your password manager (username = repository, password = token) so it autofills on every device.")
+                    }
+                }
+            }
+            .formStyle(.grouped)
+            HStack {
+                Button("Done") { state.saveCredentials(); dismiss() }.buttonStyle(.glass)
+                Spacer()
+                Button(state.connected ? "Save and reconnect" : "Connect") {
+                    Task {
+                        await state.connect()
+                        if state.connected, state.errorMessage == nil { dismiss() }
+                    }
+                }
+                .buttonStyle(.glassProminent)
+                .disabled(state.busy || state.device.repository.isEmpty || state.token.isEmpty)
+            }
+            .padding()
+        }
+        .frame(width: 520, height: 480)
+    }
+}
+
+// MARK: - Info (for the curious)
+
+struct SyncInfoPopover: View {
+    @EnvironmentObject var state: AppState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Sync details").font(.headline)
+            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
+                row("Repository", GitSync.normalize(state.device.repository))
+                row("Branch", state.syncInfo?.branch ?? (state.device.branch.isEmpty ? "default" : state.device.branch))
+                row("Folder", state.device.configFolder)
+                row("Local copy", AppPaths.repo.path)
+            }
+            .font(.caption)
+            Divider()
+            Text("History").font(.subheadline.bold())
+            if state.commits.isEmpty {
+                Text("No commits yet").font(.caption).foregroundStyle(.secondary)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 3) {
+                        ForEach(state.commits, id: \.self) { Text($0).font(.caption.monospaced()).lineLimit(1) }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 220)
+            }
+            Button("Show local copy in Finder") { NSWorkspace.shared.activateFileViewerSelecting([AppPaths.repo]) }
+                .buttonStyle(.glass)
+        }
+        .padding(16)
+        .frame(width: 440)
+    }
+
+    private func row(_ key: String, _ value: String) -> some View {
+        GridRow {
+            Text(key).foregroundStyle(.secondary)
+            Text(value.isEmpty ? "–" : value).textSelection(.enabled).lineLimit(2)
+        }
     }
 }
 
@@ -79,6 +123,7 @@ struct SyncView: View {
 
 struct StatusCard: View {
     @EnvironmentObject var state: AppState
+    @State private var showInfo = false
 
     var body: some View {
         let kind = state.syncKind
@@ -96,6 +141,21 @@ struct StatusCard: View {
                     if let info { detail(info) }
                 }
                 Spacer()
+                HStack(spacing: 6) {
+                    Button { Task { await state.checkSync() } } label: {
+                        Image(systemName: "arrow.clockwise").symbolEffect(.rotate, isActive: state.checking)
+                    }
+                    .help("Check GitHub now")
+                    .disabled(state.busy || !state.connected)
+                    Button { showInfo = true } label: { Image(systemName: "info") }
+                        .help("Details and history")
+                        .popover(isPresented: $showInfo, arrowEdge: .bottom) { SyncInfoPopover() }
+                    Button { state.showConnection = true } label: { Image(systemName: "gearshape") }
+                        .help("Connection settings")
+                }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .controlSize(.large)
             }
             if let info, kind != .unconfigured, kind != .notConnected { versions(info) }
             HStack {
@@ -108,10 +168,6 @@ struct StatusCard: View {
                 Button("View changes") { state.showDiff = true }
                     .buttonStyle(.glass)
                     .disabled(state.syncInfo == nil)
-
-                Button { Task { await state.checkSync() } } label: { Label("Check now", systemImage: "arrow.clockwise") }
-                    .buttonStyle(.glass)
-                    .disabled(state.busy || !state.connected)
             }
         }
         .padding(.vertical, 6)

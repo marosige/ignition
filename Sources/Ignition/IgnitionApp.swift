@@ -23,7 +23,7 @@ struct IgnitionApp: App {
 }
 
 enum Destination: Hashable {
-    case overview, sync, apply
+    case overview, profiles, sync, apply
     case pref(PrefCategory)
     case dock, loginApps, finderSidebar, directories, dotfiles
     case brewDiscover, brewInstalled, appStore, brewfile
@@ -35,19 +35,26 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            SidebarView(selection: $state.destination, homebrewExpanded: $homebrewExpanded)
+            SidebarView(selection: Binding(get: { state.destination }, set: { state.navigate(to: $0) }), homebrewExpanded: $homebrewExpanded)
                 .navigationSplitViewColumnWidth(min: 230, ideal: 250, max: 300)
         } detail: {
-            NavigationStack {
+            NavigationStack(path: $state.path) {
                 DetailRouter(destination: state.destination ?? .overview)
             }
         }
         .toolbar {
+            ToolbarItemGroup(placement: .navigation) {
+                Button { state.goBack() } label: { Label("Back", systemImage: "chevron.left") }
+                    .disabled(!state.canGoBack)
+                Button { state.goForward() } label: { Label("Forward", systemImage: "chevron.right") }
+                    .disabled(!state.canGoForward)
+            }
             ToolbarItem(placement: .automatic) { ProfileMenu() }
             ToolbarItem(placement: .automatic) { SyncButton() }
         }
         .sheet(isPresented: $state.showConflicts) { ConflictSheet() }
         .sheet(isPresented: $state.showDiff) { DiffSheet() }
+        .sheet(isPresented: $state.showConnection) { ConnectionSheet() }
         .task { await state.checkSync() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task { await state.checkSync() }
@@ -80,6 +87,7 @@ struct DetailRouter: View {
     var body: some View {
         switch destination {
         case .overview: OverviewView()
+        case .profiles: ProfilesView()
         case .sync: SyncView()
         case .apply: ApplyView()
         case .pref(let category): PreferencesView(category: category)
@@ -112,6 +120,7 @@ struct SidebarView: View {
             }
             Section {
                 Label("Overview", systemImage: "flame").tag(Destination.overview)
+                Label("Profiles", systemImage: "square.stack.3d.up").tag(Destination.profiles)
                 Label {
                     Text("GitHub Sync")
                 } icon: {
@@ -152,21 +161,45 @@ struct SidebarView: View {
 
 struct DeviceCard: View {
     @EnvironmentObject var state: AppState
+    private let hardware = HardwareInfo.current
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "laptopcomputer")
-                .font(.title2)
-                .frame(width: 38, height: 38)
-                .glassEffect(.regular, in: .circle)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(state.device.deviceName).font(.headline)
-                Text(state.device.activeProfiles.map { $0.capitalized }.joined(separator: " + "))
-                    .font(.caption).foregroundStyle(.secondary)
+        Button { state.navigate(to: .profiles) } label: {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: hardware.symbol(forName: state.device.deviceName))
+                        .font(.title2)
+                        .frame(width: 38, height: 38)
+                        .glassEffect(.regular, in: .rect(cornerRadius: 11))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(state.device.deviceName)
+                            .font(.headline)
+                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("\(hardware.chip) · \(hardware.memoryGB) GB")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .lineLimit(1).truncationMode(.tail)
+                        Text(hardware.osVersion).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Label {
+                        Text(state.device.activeProfiles.map(\.capitalized).joined(separator: " + "))
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: { Image(systemName: "square.stack.3d.up") }
+                    Label {
+                        Text(state.syncKind.summary).fixedSize(horizontal: false, vertical: true)
+                    } icon: { Image(systemName: state.syncKind.symbol).foregroundStyle(state.syncKind.color) }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .glassEffect(.regular, in: .rect(cornerRadius: 16))
+            .contentShape(.rect(cornerRadius: 16))
         }
-        .padding(8)
+        .buttonStyle(.plain)
     }
 }
 
