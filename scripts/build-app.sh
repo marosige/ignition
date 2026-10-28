@@ -32,7 +32,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <dict>
   <key>CFBundleName</key><string>Ignition</string>
   <key>CFBundleDisplayName</key><string>Ignition</string>
-  <key>CFBundleIdentifier</key><string>hu.marosige.ignition</string>
+  <key>CFBundleIdentifier</key><string>me.marosi.ignition</string>
   <key>CFBundleExecutable</key><string>Ignition</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>

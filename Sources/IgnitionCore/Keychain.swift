@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 public enum Keychain {
-    private static let service = "hu.marosige.ignition"
+    private static let service = "me.marosi.ignition"
 
     public static func save(_ value: String, account: String) {
         let data = Data(value.utf8)

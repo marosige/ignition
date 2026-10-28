@@ -74,7 +74,7 @@ public enum Setup {
         let fm = FileManager.default
         let dir = URL(fileURLWithPath: expandTilde("~/.ignition"), isDirectory: true)
         let script = dir.appendingPathComponent("startup.sh")
-        let plist = URL(fileURLWithPath: expandTilde("~/Library/LaunchAgents/hu.marosige.ignition.startup.plist"))
+        let plist = URL(fileURLWithPath: expandTilde("~/Library/LaunchAgents/me.marosi.ignition.startup.plist"))
         do {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
             try fm.createDirectory(at: plist.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -90,7 +90,7 @@ public enum Setup {
             <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
             <plist version="1.0">
             <dict>
-                <key>Label</key><string>hu.marosige.ignition.startup</string>
+                <key>Label</key><string>me.marosi.ignition.startup</string>
                 <key>ProgramArguments</key><array><string>/bin/bash</string><string>\(script.path)</string></array>
                 <key>RunAtLoad</key><true/>
                 <key>KeepAlive</key><false/>
