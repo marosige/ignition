@@ -167,7 +167,7 @@ struct StatusCard: View {
 
                 Button("View changes") { state.showDiff = true }
                     .buttonStyle(.glass)
-                    .disabled(state.syncInfo == nil)
+                    .disabled(info == nil || (info!.changedFiles.isEmpty && info!.ahead == 0 && info!.behind == 0))
             }
         }
         .padding(.vertical, 6)
