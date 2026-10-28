@@ -47,10 +47,6 @@ struct PreferenceRow: View {
         } label: {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    if !origins.isEmpty {
-                        Circle().fill(Color.accentColor).frame(width: 7, height: 7)
-                            .help("Part of your profile")
-                    }
                     Text(def.title)
                     OriginPills(def: def, origins: origins)
                     if def.scope == .system {
@@ -157,7 +153,7 @@ struct OriginPills: View {
         ForEach(Array(origins.enumerated()), id: \.element.id) { index, origin in
             let winner = index == origins.count - 1
             pill(
-                multiple ? "\(origin.profile.capitalized): \(state.formatted(def, origin.value))" : origin.profile.capitalized,
+                multiple ? "\(origin.profile.capitalized): \(state.formatted(def, origin.value))" : (state.profileNames.count > 1 ? origin.profile.capitalized : "Saved"),
                 color: winner ? .accentColor : .secondary,
                 strike: multiple && !winner)
                 .help(multiple
