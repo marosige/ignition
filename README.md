@@ -1,18 +1,81 @@
-# Ignition
-My Personal Computer Setup Tool :rocket:
+# Ignition 🔥
 
-Say hello to Ignition, my ultimate setup tool! Designed to set up a computer exactly how I like it, Ignition takes care of everything from installing essential applications to configuring preferences and integrating my dotfiles seamlessly. This tool is tailored specifically for my needs, ensuring that every new system is personalized to perfection.
+A native macOS app that turns any Mac into **your** Mac – and keeps it that way.
 
-Currently, Ignition can set up two types of systems: my daily driver macOS, which I use for everyday tasks and work (including android software development), and my homelab setup, which consists of an Ubuntu server running my home server needs.
+You configure everything with a GUI that looks like System Settings (Liquid Glass, macOS 26+), save it
+to a private GitHub repo, and on any other Mac you connect the repo, press **Apply** and you are done.
 
-While Ignition is my go-to setup solution, it's also easily forkable, allowing others to customize it to their preferences. Get ready to experience computing the way I like it with Ignition!
+## What it manages
 
-## Usage
+| Area | What you get |
+| --- | --- |
+| **Settings** | Per-category panes (Desktop & Dock, Finder, Keyboard, Trackpad, Date & Time, …) – only the options Ignition really sets. Every row can be reset to the macOS default of the running OS version. |
+| **Dock layout** | Visual editor: apps, spacers, folders, drag to reorder, import the current Dock, apply with `dockutil`. |
+| **Login apps** | The list of apps that start after login. |
+| **Finder sidebar** | Favorites list. |
+| **Folders** | The directory structure you want (`~/workspace/work`, …). |
+| **Dotfiles** | Files are moved into the repo and symlinked back. Suggestions for files found on the Mac, backups of anything replaced. |
+| **Homebrew** | A store: search all formulae and casks, detail page, install / uninstall, installed list, Brewfile view that shows what is missing from your profile. |
+| **App Store** | `mas` search, install and list. |
+| **GitHub sync** | Fine-grained token + `owner/repo`. Commits are tagged with the device (`[Mac mini] Update base (settings)`). |
 
-**Warning:** Before applying these installs, preferences, and dotfiles, it is strongly recommended to fork this repository, carefully review the code, and remove elements you don't want or need!
-Don’t blindly use my settings unless you know what that entails. Use at your own risk!
+## Profiles: base + personal / work
 
-To initiate the setup process, run the following command in your terminal:
+The configuration is layered. Pick the active profiles per Mac in the toolbar menu:
 
-    bash -c "$(curl -fsSL https://raw.githubusercontent.com/marosige/ignition/main/download.sh)"
+```
+base ──► personal      (private MacBook)
+base ──► work          (work MacBook)
+```
 
+Anything saved into **Base** reaches every Mac on the next pull. The toolbar shows which profile receives
+your changes (“Saving to Work”).
+
+## Config repo layout
+
+Everything lives in an `ignition/` folder at the root of your private repo:
+
+```
+ignition/
+  profiles/
+    base/
+      profile.json        settings, folders, packages, login apps, sidebar, dock
+      dotfiles/           mirrors $HOME (.zshrc, .config/fish/…)
+    personal/…
+    work/…
+```
+
+`seed/ignition` in this repository is the author’s own configuration. Use **Overview → Load starter
+configuration** to start from it, then push it to your private repo.
+
+## Install
+
+On a fresh Mac:
+
+```sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/marosige/ignition/main/scripts/install.sh)"
+```
+
+Then: **GitHub Sync** → repository + token + device name → **Connect** → pick profiles → **Apply to this Mac**.
+
+### Build from source
+
+Requires macOS 26, Xcode 26 (Swift 6.2).
+
+```sh
+./scripts/build-app.sh && open build/Ignition.app
+swift test
+```
+
+Tagging `v*` builds and publishes `Ignition.zip` through GitHub Actions.
+
+## How “Reset to default” works
+
+Reset deletes the key from the preference domain, so macOS falls back to its own default for the
+installed OS version. Rows without a saved value always show what is currently active on the Mac.
+
+## Notes
+
+* The home-server part moved out of this repository.
+* Settings that need administrator rights are written through one password prompt.
+* Don’t put secrets into tracked dotfiles.

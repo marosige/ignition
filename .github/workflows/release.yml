@@ -1,0 +1,29 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-26
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: swift test
+      - name: Build app
+        run: ./scripts/build-app.sh
+      - name: Zip
+        run: ditto -c -k --keepParent build/Ignition.app Ignition.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ignition
+          path: Ignition.zip
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Ignition.zip

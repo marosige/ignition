@@ -1,0 +1,162 @@
+{
+  "title": "Personal",
+  "dock": [
+    {
+      "kind": "spacer"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Google Chrome.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/ChatGPT.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/YT Music.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Reolink.app"
+    },
+    {
+      "kind": "spacer"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Messenger.app"
+    },
+    {
+      "kind": "app",
+      "path": "/System/Applications/Messages.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/WhatsApp.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Slack.app"
+    },
+    {
+      "kind": "spacer"
+    },
+    {
+      "kind": "app",
+      "path": "/System/Applications/Calendar.app"
+    },
+    {
+      "kind": "app",
+      "path": "/System/Applications/Reminders.app"
+    },
+    {
+      "kind": "app",
+      "path": "/System/Applications/Notes.app"
+    },
+    {
+      "kind": "app",
+      "path": "/System/Applications/Passwords.app"
+    },
+    {
+      "kind": "app",
+      "path": "/System/Applications/Utilities/Screenshot.app"
+    },
+    {
+      "kind": "spacer"
+    },
+    {
+      "kind": "app",
+      "path": "/System/Applications/Utilities/Terminal.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Fork.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Visual Studio Code.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Android Studio.app"
+    },
+    {
+      "kind": "spacer"
+    },
+    {
+      "kind": "folder",
+      "path": "~/Downloads"
+    }
+  ],
+  "packages": {
+    "taps": [],
+    "brews": [
+      {
+        "name": "pandoc",
+        "comment": "Required by my recipe manager script - Swiss-army knife of markup format conversion."
+      }
+    ],
+    "casks": [
+      {
+        "name": "messenger",
+        "comment": "Native desktop app for Messenger (formerly Facebook Messenger)"
+      },
+      {
+        "name": "whatsapp",
+        "comment": "Native desktop client for WhatsApp"
+      },
+      {
+        "name": "slack",
+        "comment": "Team communication and collaboration software"
+      },
+      {
+        "name": "discord",
+        "comment": "Voice and text chat software"
+      },
+      {
+        "name": "zoom",
+        "comment": "Video communication and virtual meeting platform"
+      },
+      {
+        "name": "skype",
+        "comment": "Video chat, voice call and instant messaging application"
+      },
+      {
+        "name": "audacity",
+        "comment": "Multi-track audio editor and recorder"
+      },
+      {
+        "name": "sweet-home3d",
+        "comment": "Interior design application"
+      },
+      {
+        "name": "balenaetcher",
+        "comment": "Tool to flash OS images to SD cards & USB drives"
+      },
+      {
+        "name": "philips-hue-sync",
+        "comment": "Control your smart light system"
+      },
+      {
+        "name": "ukelele",
+        "comment": "Unicode keyboard layout editor"
+      },
+      {
+        "name": "coconutbattery",
+        "comment": "Tool to show live information about the batteries in various devices"
+      },
+      {
+        "name": "8bitdo-ultimate-software",
+        "comment": "Control every piece of your controller"
+      }
+    ],
+    "mas": [
+      {
+        "id": 408981434,
+        "name": "iMovie"
+      }
+    ],
+    "vscode": []
+  }
+}

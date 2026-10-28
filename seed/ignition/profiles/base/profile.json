@@ -1,0 +1,324 @@
+{
+  "title": "Base",
+  "preferences": {
+    "dock.tilesize": 32,
+    "dock.largesize": 48,
+    "dock.magnification": true,
+    "dock.size-immutable": true,
+    "dock.mineffect": "scale",
+    "dock.show-recents": false,
+    "dock.scroll-to-open": true,
+    "dock.orientation": "bottom",
+    "dock.static-only": false,
+    "dock.autohide": false,
+    "desktop.click-to-show": false,
+    "desktop.icons": true,
+    "desktop.harddisks": false,
+    "desktop.external": true,
+    "desktop.removable": true,
+    "desktop.servers": false,
+    "mc.mru-spaces": false,
+    "mc.switch-on-activate": true,
+    "mc.spans-displays": false,
+    "finder.extensions": true,
+    "finder.hidden": true,
+    "finder.view": "clmv",
+    "finder.pathbar": true,
+    "finder.trash-warning": false,
+    "finder.folders-first": false,
+    "finder.ext-warning": true,
+    "finder.sidebar-icon-size": 2,
+    "finder.search-scope": "SCcf",
+    "finder.no-dsstore-network": true,
+    "finder.no-dsstore-usb": true,
+    "finder.library": true,
+    "finder.new-window": "PfHm",
+    "menubar.battery-percent": true,
+    "menubar.bluetooth": 18,
+    "menubar.sound": 18,
+    "menubar.text-input": true,
+    "menubar.airplay": true,
+    "datetime.timezone": "Europe/Budapest",
+    "datetime.network-time": true,
+    "datetime.auto-timezone": true,
+    "clock.analog": false,
+    "clock.flash-separators": false,
+    "clock.format": "MMM d EEE HH:mm",
+    "keyboard.full-access": 1,
+    "keyboard.fn-state": false,
+    "keyboard.press-and-hold": false,
+    "keyboard.key-repeat": 2,
+    "keyboard.initial-repeat": 15,
+    "keyboard.autocorrect": false,
+    "keyboard.spellcheck": false,
+    "keyboard.autocapitalize": false,
+    "keyboard.period-substitution": false,
+    "keyboard.smart-dashes": false,
+    "keyboard.smart-quotes": false,
+    "keyboard.input-source": "en_hu",
+    "keyboard.backlight-auto": true,
+    "keyboard.backlight-dim": 300,
+    "trackpad.speed": 4.5,
+    "trackpad.click": 0,
+    "trackpad.force-click": 0,
+    "trackpad.swipe-navigate": true,
+    "displays.auto-brightness": true,
+    "displays.auto-brightness-system": true,
+    "displays.font-smoothing": 2,
+    "displays.hidpi": true,
+    "a11y.shake-to-locate": true,
+    "a11y.zoom-temporary": false,
+    "a11y.zoom-scroll": true,
+    "a11y.zoom-modifier": 262144,
+    "a11y.zoom-smooth": false,
+    "a11y.zoom-follow-focus": true,
+    "a11y.zoom-style": 0,
+    "notifications.banner-time": 2,
+    "siri.enabled": false,
+    "siri.language": "en-US",
+    "siri.voice-feedback": 3,
+    "siri.shortcut": 0,
+    "siri.menubar": false,
+    "privacy.screensaver-password": true,
+    "privacy.password-delay": 0,
+    "privacy.quarantine": false,
+    "privacy.firewall": 1,
+    "privacy.firewall-signed": true,
+    "screenshot.thumbnail": false,
+    "screenshot.format": "png",
+    "shell.default": "fish",
+    "hotcorner.tl": 0,
+    "hotcorner.tl.modifier": 0,
+    "hotcorner.tr": 0,
+    "hotcorner.tr.modifier": 0,
+    "hotcorner.bl": 0,
+    "hotcorner.bl.modifier": 0,
+    "hotcorner.br": 0,
+    "hotcorner.br.modifier": 0
+  },
+  "finderSidebar": [
+    {
+      "name": "Applications",
+      "path": "/Applications"
+    },
+    {
+      "name": "~",
+      "path": "~"
+    },
+    {
+      "name": "workspace",
+      "path": "~/workspace"
+    },
+    {
+      "name": "tmp",
+      "path": "~/tmp"
+    },
+    {
+      "name": "Desktop",
+      "path": "~/Desktop"
+    },
+    {
+      "name": "Downloads",
+      "path": "~/Downloads"
+    }
+  ],
+  "directories": [
+    {
+      "path": "~/bin",
+      "comment": "For installed scripts"
+    },
+    {
+      "path": "~/tmp",
+      "comment": "For temporary files"
+    },
+    {
+      "path": "~/workspace",
+      "comment": "For my git repos"
+    },
+    {
+      "path": "~/workspace/work",
+      "comment": "For my work projects"
+    },
+    {
+      "path": "~/workspace/personal",
+      "comment": "For my personal projects"
+    },
+    {
+      "path": "~/workspace/playground",
+      "comment": "For temporary projects"
+    },
+    {
+      "path": "~/workspace/third",
+      "comment": "For 3rd party projects, libs sources"
+    }
+  ],
+  "packages": {
+    "taps": [],
+    "brews": [
+      {
+        "name": "mas",
+        "comment": "Mac App Store command-line interface"
+      },
+      {
+        "name": "dockutil",
+        "comment": "Tool for managing dock items"
+      },
+      {
+        "name": "gum",
+        "comment": "Tool for glamorous shell scripts"
+      },
+      {
+        "name": "bash",
+        "comment": "Update Bash to 5.2+ (Apple won't distribute newer versions due to license concerns)"
+      },
+      {
+        "name": "fish",
+        "comment": "User-friendly command-line shell for UNIX-like operating systems"
+      },
+      {
+        "name": "midnight-commander",
+        "comment": "midnight-commander Terminal-based visual file manager"
+      },
+      {
+        "name": "tldr",
+        "comment": "Simplified and community-driven man pages"
+      },
+      {
+        "name": "tree",
+        "comment": "Display directories as trees (with optional color/HTML output)"
+      },
+      {
+        "name": "wget",
+        "comment": "Internet file retriever"
+      },
+      {
+        "name": "imagemagick",
+        "comment": "Tools and libraries to manipulate images in many formats"
+      },
+      {
+        "name": "ffmpeg",
+        "comment": "Play, record, convert, and stream audio and video"
+      },
+      {
+        "name": "yt-dlp",
+        "comment": "Feature-rich command-line audio/video downloader"
+      },
+      {
+        "name": "speedtest-cli",
+        "comment": "Command-line interface for https://speedtest.net bandwidth tests"
+      },
+      {
+        "name": "btop",
+        "comment": "Resource monitor. C++ version and continuation of bashtop and bpytop"
+      },
+      {
+        "name": "neofetch",
+        "comment": "Fast, highly customisable system info script"
+      },
+      {
+        "name": "git",
+        "comment": "Distributed revision control system"
+      },
+      {
+        "name": "git-lfs",
+        "comment": "Git Large File Storage"
+      }
+    ],
+    "casks": [
+      {
+        "name": "mysides",
+        "comment": "A simple CLI tool for Finder sidebar modification."
+      },
+      {
+        "name": "fork",
+        "comment": "GIT client"
+      },
+      {
+        "name": "visual-studio-code",
+        "comment": "Open-source code editor"
+      },
+      {
+        "name": "android-studio",
+        "comment": "Tools for building Android applications"
+      },
+      {
+        "name": "temurin",
+        "comment": "Required for ./gradlew projects - JDK from the Eclipse Foundation"
+      },
+      {
+        "name": "the-unarchiver",
+        "comment": "Unpacks archive files"
+      },
+      {
+        "name": "android-file-transfer",
+        "comment": "Transfer files from and to an Android smartphone"
+      },
+      {
+        "name": "yt-music",
+        "comment": "YouTube music client"
+      },
+      {
+        "name": "monitorcontrol",
+        "comment": "Tool to control external monitor brightness & volume"
+      },
+      {
+        "name": "startupfolder",
+        "comment": "Run anything at startup by simply placing it in a special folder"
+      },
+      {
+        "name": "chatgpt",
+        "comment": "OpenAI's official ChatGPT desktop app"
+      },
+      {
+        "name": "logi-options+",
+        "comment": "Software for Logitech devices"
+      },
+      {
+        "name": "appcleaner",
+        "comment": "Application uninstaller"
+      }
+    ],
+    "mas": [
+      {
+        "id": 441258766,
+        "name": "Magnet"
+      },
+      {
+        "id": 937984704,
+        "name": "Amphetamine"
+      }
+    ],
+    "vscode": [
+      {
+        "name": "mads-hartmann.bash-ide-vscode"
+      },
+      {
+        "name": "timonwong.shellcheck"
+      },
+      {
+        "name": "slevesque.sh-beautify"
+      },
+      {
+        "name": "fwcd.kotlin"
+      },
+      {
+        "name": "ms-python.python"
+      },
+      {
+        "name": "zhuangtongfa.Material-theme"
+      }
+    ]
+  },
+  "startup": {
+    "apps": [
+      "MonitorControl",
+      "amphetamine",
+      "magnet",
+      "logi Options+"
+    ],
+    "closeFinderWindows": true
+  },
+  "copyFiles": [
+    "Library/Keyboard Layouts/en_hu.keylayout"
+  ]
+}

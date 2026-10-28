@@ -1,0 +1,117 @@
+{
+  "title": "Work",
+  "dock": [
+    {
+      "kind": "spacer"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Google Chrome.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/ChatGPT.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/YT Music.app"
+    },
+    {
+      "kind": "spacer"
+    },
+    {
+      "kind": "app",
+      "path": "/System/Applications/Calendar.app"
+    },
+    {
+      "kind": "app",
+      "path": "/System/Applications/Reminders.app"
+    },
+    {
+      "kind": "app",
+      "path": "/System/Applications/Notes.app"
+    },
+    {
+      "kind": "app",
+      "path": "/System/Applications/Passwords.app"
+    },
+    {
+      "kind": "app",
+      "path": "/System/Applications/Utilities/Screenshot.app"
+    },
+    {
+      "kind": "spacer"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Cisco/Cisco Secure Client.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Figma.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Microsoft Outlook.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Microsoft Teams.app"
+    },
+    {
+      "kind": "spacer"
+    },
+    {
+      "kind": "app",
+      "path": "/System/Applications/Utilities/Terminal.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Fork.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Visual Studio Code.app"
+    },
+    {
+      "kind": "app",
+      "path": "/Applications/Android Studio.app"
+    },
+    {
+      "kind": "spacer"
+    },
+    {
+      "kind": "folder",
+      "path": "~/Downloads"
+    }
+  ],
+  "packages": {
+    "taps": [],
+    "brews": [],
+    "casks": [
+      {
+        "name": "microsoft-teams",
+        "comment": "Meet, chat, call, and collaborate in just one place"
+      },
+      {
+        "name": "microsoft-office",
+        "comment": "Office suite"
+      },
+      {
+        "name": "adobe-acrobat-reader",
+        "comment": "View, print, and comment on PDF documents"
+      },
+      {
+        "name": "figma",
+        "comment": "Design tool for UI/UX"
+      }
+    ],
+    "mas": [
+      {
+        "id": 497799835,
+        "name": "Xcode"
+      }
+    ],
+    "vscode": []
+  }
+}
