@@ -67,11 +67,11 @@ struct PreferenceRow: View {
         let current = state.value(for: def)
         let isDefault = current == def.osDefault
         if !origins.isEmpty {
-            Text(isDefault ? "Same as the macOS default" : "macOS default: \(state.defaultText(def))")
+            Text(isDefault ? "Default" : "Default: \(state.defaultText(def))")
                 .font(.caption).foregroundStyle(.secondary)
         } else if !isDefault, def.osDefault != nil, state.editingIsActive {
             HStack(spacing: 8) {
-                Text("Set on this Mac, not in your profile · macOS default: \(state.defaultText(def))")
+                Text("Not in profile · default: \(state.defaultText(def))")
                     .font(.caption).foregroundStyle(.orange)
                 addToProfile
             }
