@@ -1,4 +1,5 @@
 import Foundation
+import IOKit.ps
 
 /// A few facts about this Mac for the device card.
 public struct HardwareInfo {
@@ -20,7 +21,10 @@ public struct HardwareInfo {
     private static func read() -> HardwareInfo {
         let v = ProcessInfo.processInfo.operatingSystemVersion
         let os = "macOS \(v.majorVersion).\(v.minorVersion)" + (v.patchVersion > 0 ? ".\(v.patchVersion)" : "")
-        let battery = Shell.run("pmset", ["-g", "batt"]).out.contains("InternalBattery")
+        // No subprocess here: this runs while SwiftUI is building views.
+        let sources = IOPSCopyPowerSourcesInfo().takeRetainedValue()
+        let list = IOPSCopyPowerSourcesList(sources).takeRetainedValue() as [CFTypeRef]
+        let battery = !list.isEmpty
         return HardwareInfo(
             chip: sysctlString("machdep.cpu.brand_string") ?? "Mac",
             memoryGB: Int(ProcessInfo.processInfo.physicalMemory / 1_073_741_824),

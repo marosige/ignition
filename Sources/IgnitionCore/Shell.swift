@@ -68,12 +68,16 @@ public enum Shell {
             flushLines(data)
         }
 
+        // Block on a semaphore instead of waitUntilExit(), which spins the run loop and
+        // can re-enter SwiftUI view updates when called on the main thread.
+        let finished = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in finished.signal() }
         do {
             try process.run()
         } catch {
             return ShellResult(status: 127, out: "", err: "\(error.localizedDescription)")
         }
-        process.waitUntilExit()
+        finished.wait()
         outPipe.fileHandleForReading.readabilityHandler = nil
         errPipe.fileHandleForReading.readabilityHandler = nil
         outData.append(outPipe.fileHandleForReading.readDataToEndOfFile())
