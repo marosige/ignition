@@ -63,17 +63,18 @@ struct DotfilesView: View {
                 } label: { Label("Track File or Folder…", systemImage: "plus") }
                 Button {
                     run {
-                        _ = Setup.linkDotfiles(profiles: state.device.activeProfiles, copyFiles: state.effective.copyFiles, log: { _ in })
+                        _ = Setup.linkDotfiles(profiles: state.layers, copyFiles: state.effective.copyFiles, log: { _ in })
                     }
                 } label: { Label("Link All", systemImage: "link") }
                 .buttonStyle(.glassProminent)
+                .disabled(!state.editingIsActive)
             }
         }
         .onAppear(perform: reload)
     }
 
     private func reload() {
-        entries = Dotfiles.scan(profiles: state.device.activeProfiles, copyFiles: state.effective.copyFiles)
+        entries = Dotfiles.scan(profiles: state.viewLayers, copyFiles: state.viewEffective.copyFiles)
         suggestions = Dotfiles.suggestions(tracked: Set(entries.map(\.relativePath)))
     }
 
@@ -85,7 +86,7 @@ struct DotfilesView: View {
 
     private func track(_ url: URL) {
         run {
-            let rels = try Dotfiles.adopt(url, into: state.device.editingProfile)
+            let rels = try Dotfiles.adopt(url, into: state.device.editingProfile, copy: !state.editingIsActive)
             message = "Tracking \(rels.count) file\(rels.count == 1 ? "" : "s") in \(state.device.editingProfile.capitalized)."
         }
     }

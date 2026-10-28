@@ -77,8 +77,41 @@ final class AppState: ObservableObject {
 
     // MARK: Profiles
 
-    var activeProfiles: [Profile] { device.activeProfiles.compactMap { profiles[$0] } }
+    /// The picked profiles plus everything they build on, parents first.
+    func resolve(_ names: [String]) -> [String] {
+        var out: [String] = []
+        var seen = Set<String>()
+        func visit(_ name: String) {
+            guard let profile = profiles[name], seen.insert(name).inserted else { return }
+            if let parent = profile.extends { visit(parent) }
+            out.append(name)
+        }
+        names.forEach(visit)
+        return out
+    }
+
+    /// What is switched on for this Mac, in layering order.
+    var layers: [String] { resolve(device.activeProfiles) }
+    /// Same, plus the profile being edited (which may not be on this Mac).
+    var viewLayers: [String] { resolve(device.activeProfiles + [device.editingProfile]) }
+    var editingIsActive: Bool { layers.contains(device.editingProfile) }
+    var activeProfiles: [Profile] { layers.compactMap { profiles[$0] } }
+    /// What gets applied to this Mac.
     var effective: Profile { Profile.merged(activeProfiles) }
+    /// What the settings pages show (includes a profile that is only being edited).
+    var viewEffective: Profile { Profile.merged(viewLayers.compactMap { profiles[$0] }) }
+
+    /// Active profiles that need this one (so it cannot be switched off).
+    func requiredBy(_ name: String) -> [String] {
+        layers.filter { $0 != name && resolve([$0]).contains(name) }
+    }
+
+    func setParent(_ parent: String?, of name: String) {
+        guard var p = profiles[name] else { return }
+        p.extends = parent
+        profiles[name] = p
+        persist(name)
+    }
     var editing: Profile {
         get { profiles[device.editingProfile] ?? Profile(title: device.editingProfile) }
         set { profiles[device.editingProfile] = newValue; persist(device.editingProfile) }
@@ -89,9 +122,11 @@ final class AppState: ObservableObject {
         profiles = [:]
         for name in profileNames { profiles[name] = ConfigStore.loadProfile(name) }
         device.activeProfiles = device.activeProfiles.filter { profileNames.contains($0) }
-        if device.activeProfiles.isEmpty, profileNames.contains("base") { device.activeProfiles = ["base"] }
+        if device.activeProfiles.isEmpty {
+            device.activeProfiles = [profileNames.contains("base") ? "base" : (profileNames.first ?? "base")]
+        }
         if !profileNames.contains(device.editingProfile) {
-            device.editingProfile = device.activeProfiles.last ?? profileNames.first ?? "base"
+            device.editingProfile = layers.last ?? profileNames.first ?? "base"
         }
         saveDevice()
         refreshChanges()
@@ -107,13 +142,16 @@ final class AppState: ObservableObject {
     func createProfile(_ name: String) {
         let slug = name.lowercased().filter { $0.isLetter || $0.isNumber || $0 == "-" }
         guard !slug.isEmpty, profiles[slug] == nil else { return }
-        profiles[slug] = Profile(title: name)
+        var profile = Profile(title: name)
+        if profileNames.contains("base") { profile.extends = "base" }
+        profiles[slug] = profile
         persist(slug)
         profileNames = ConfigStore.profileNames()
     }
 
     func deleteProfile(_ name: String) {
         guard name != "base" else { return }
+        for other in profileNames where profiles[other]?.extends == name { setParent(nil, of: other) }
         do { try ConfigStore.deleteProfile(name) } catch { errorMessage = error.localizedDescription }
         device.activeProfiles.removeAll { $0 == name }
         reloadProfiles()
@@ -121,7 +159,7 @@ final class AppState: ObservableObject {
 
     func toggleActive(_ name: String) {
         if let idx = device.activeProfiles.firstIndex(of: name) {
-            if name != "base" { device.activeProfiles.remove(at: idx) }
+            device.activeProfiles.remove(at: idx)
         } else {
             device.activeProfiles.append(name)
         }
@@ -146,11 +184,11 @@ final class AppState: ObservableObject {
 
     /// What the control should show: profile value, else the Mac's current value, else macOS's default.
     func value(for def: PreferenceDef) -> PrefValue? {
-        effective.preferences[def.id] ?? live[def.id] ?? def.osDefault
+        viewEffective.preferences[def.id] ?? live[def.id] ?? def.osDefault
     }
 
     func isManaged(_ def: PreferenceDef) -> Bool {
-        effective.preferences[def.id] != nil
+        viewEffective.preferences[def.id] != nil
     }
 
     func isManagedByEditing(_ def: PreferenceDef) -> Bool {
@@ -159,7 +197,7 @@ final class AppState: ObservableObject {
 
     /// Every active profile that sets this preference, in layering order (the last one wins).
     func origins(for def: PreferenceDef) -> [PrefOrigin] {
-        device.activeProfiles.compactMap { name in
+        viewLayers.compactMap { name in
             guard let value = profiles[name]?.preferences[def.id] else { return nil }
             let unsaved = connected && committed[name]?.preferences[def.id] != value
             return PrefOrigin(profile: name, value: value, unsaved: unsaved)
@@ -187,32 +225,29 @@ final class AppState: ObservableObject {
         def.osDefault == nil ? "decided by macOS" : formatted(def, def.osDefault)
     }
 
+    /// Saves into the profile being edited. Only touches this Mac when that profile is switched on.
     func set(_ def: PreferenceDef, to value: PrefValue) {
-        let r = DefaultsService.write(def, value)
-        if !r.ok { errorMessage = "\(def.title): \(r.combined)"; return }
-        scheduleRestart(def.restart)
-        live[def.id] = value
         var p = editing
         p.preferences[def.id] = value
         editing = p
+        applyEffective(def)
     }
 
-    /// Puts a value that is only set on this Mac into a profile, without touching the system.
-    func adopt(_ def: PreferenceDef, into profileName: String) {
-        guard var profile = profiles[profileName], let value = live[def.id] ?? def.osDefault else { return }
-        profile.preferences[def.id] = value
-        profiles[profileName] = profile
-        persist(profileName)
-    }
-
-    /// Drops the setting from the profile and puts the Mac back to its macOS default.
+    /// Drops the setting from the profile; this Mac falls back to what remains, or to the macOS default.
     func reset(_ def: PreferenceDef) {
         var p = editing
         p.preferences[def.id] = nil
         editing = p
-        if let inherited = effective.preferences[def.id] {
-            _ = DefaultsService.write(def, inherited)
-            live[def.id] = inherited
+        applyEffective(def)
+    }
+
+    /// Makes this Mac match what the switched-on profiles say about a setting.
+    private func applyEffective(_ def: PreferenceDef) {
+        guard editingIsActive else { return }
+        if let value = effective.preferences[def.id] {
+            let r = DefaultsService.write(def, value)
+            if !r.ok { errorMessage = "\(def.title): \(r.combined)"; return }
+            live[def.id] = value
         } else {
             _ = DefaultsService.reset(def)
             live[def.id] = DefaultsService.read(def)

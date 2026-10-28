@@ -188,11 +188,13 @@ public struct Profile: Codable, Equatable {
     public var copyFiles: [String] = []
     /// What I want for settings macOS does not let scripts change (see `ManualSettings`).
     public var manualNotes: [String: String] = [:]
+    /// Name of the profile this one builds on (it is switched on together with it).
+    public var extends: String?
 
     public init(title: String = "") { self.title = title }
 
     enum CodingKeys: String, CodingKey {
-        case title, preferences, dock, finderSidebar, directories, packages, startup, copyFiles, manualNotes
+        case title, preferences, dock, finderSidebar, directories, packages, startup, copyFiles, manualNotes, extends
     }
 
     public init(from decoder: Decoder) throws {
@@ -206,6 +208,7 @@ public struct Profile: Codable, Equatable {
         startup = try c.decodeIfPresent(Startup.self, forKey: .startup) ?? Startup()
         copyFiles = try c.decodeIfPresent([String].self, forKey: .copyFiles) ?? []
         manualNotes = try c.decodeIfPresent([String: String].self, forKey: .manualNotes) ?? [:]
+        extends = try c.decodeIfPresent(String.self, forKey: .extends)
     }
 
     /// Layers profiles in order; later ones win.

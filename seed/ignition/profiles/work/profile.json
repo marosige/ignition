@@ -113,5 +113,6 @@
       }
     ],
     "vscode": []
-  }
+  },
+  "extends": "base"
 }

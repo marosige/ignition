@@ -122,6 +122,7 @@ struct DockEditorView: View {
                     result = ok ? "Dock updated." : "Some Dock items could not be applied (is dockutil installed?)."
                 } label: { Label("Apply to Dock", systemImage: "play.fill") }
                 .buttonStyle(.glassProminent)
+                .disabled(!state.editingIsActive)
             }
         }
         .sheet(isPresented: $showPicker) {
@@ -181,6 +182,7 @@ struct LoginAppsView: View {
                 Button("Apply now") {
                     result = Setup.applyStartup(state.effective.startup, log: { _ in }) ? "Login apps updated." : "Could not load the launch agent."
                 }
+                .disabled(!state.editingIsActive)
                 if let result { Text(result).foregroundStyle(.secondary) }
             } footer: {
                 Text("Ignition installs one launch agent that opens these apps in order a few seconds after login.")
@@ -243,6 +245,7 @@ struct FinderSidebarView: View {
                     result = Setup.applySidebar(state.effective.finderSidebar ?? [], log: { _ in }) ? "Sidebar updated." : "Could not update the sidebar (is mysides installed?)."
                 } label: { Label("Apply", systemImage: "play.fill") }
                 .buttonStyle(.glassProminent)
+                .disabled(!state.editingIsActive)
             }
         }
     }
@@ -302,6 +305,7 @@ struct DirectoriesView: View {
                     _ = Setup.createDirectories(state.effective.directories, log: { _ in })
                     state.objectWillChange.send()
                 }
+                .disabled(!state.editingIsActive)
             }
         }
         .formStyle(.grouped)

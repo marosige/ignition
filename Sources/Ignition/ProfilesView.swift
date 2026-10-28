@@ -12,9 +12,9 @@ struct ProfilesView: View {
                     ProfileRow(name: name, askDelete: { deleting = name })
                 }
             } header: {
-                Text("Profiles on \(state.device.deviceName)")
+                Text("Profiles")
             } footer: {
-                Text("Profiles are layers. Base applies to every Mac; the others are switched on per Mac and win over Base when both set the same thing. Which profile an edit lands in is chosen in the toolbar (“Saving to …”).")
+                Text("A profile can build on another one: Work building on Base starts from everything in Base and adds or overrides things. Switching a profile on switches on what it builds on. “Edit” lets you change any profile, even one that is not on this Mac – nothing is applied here until it is switched on.")
             }
             Section("New profile") { NewProfileRow() }
         }
@@ -39,39 +39,65 @@ struct ProfileRow: View {
 
     var body: some View {
         let profile = state.profiles[name] ?? Profile()
-        let active = state.device.activeProfiles.contains(name)
+        let on = state.layers.contains(name)
+        let needed = state.requiredBy(name)
         let packages = profile.packages.brews.count + profile.packages.casks.count + profile.packages.mas.count
         HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
                     Text(name.capitalized).font(.headline)
-                    if state.device.editingProfile == name {
-                        Text("Saving here").font(.caption2.weight(.semibold))
-                            .padding(.horizontal, 6).padding(.vertical, 1)
-                            .background(Color.accentColor.opacity(0.18), in: .capsule)
-                            .foregroundStyle(Color.accentColor)
-                    }
+                    if state.device.editingProfile == name { pill("Editing", .accentColor) }
+                    if !on { pill("Not on this Mac", .secondary) }
                 }
-                Text(name == "base" ? "Shared by every Mac" : "Layered on top of Base")
-                    .font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text("Builds on").font(.caption).foregroundStyle(.secondary)
+                    Picker("", selection: Binding(
+                        get: { profile.extends ?? "" },
+                        set: { state.setParent($0.isEmpty ? nil : $0, of: name) })) {
+                        Text("Nothing (stand-alone)").tag("")
+                        ForEach(candidates(for: name), id: \.self) { Text($0.capitalized).tag($0) }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .controlSize(.small)
+                    .fixedSize()
+                }
                 Text("\(profile.preferences.count) settings · \(packages) packages · \(profile.dock?.count ?? 0) Dock items")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Button("Save changes here") { state.device.editingProfile = name; state.saveDevice() }
-                .buttonStyle(.glass)
-                .disabled(state.device.editingProfile == name || !active)
-                .help(active ? "New edits go into this profile" : "Turn the profile on first")
-            if name != "base" {
-                Button(role: .destructive) { askDelete() } label: { Image(systemName: "trash") }
-                    .buttonStyle(.borderless)
+            Button(state.device.editingProfile == name ? "Editing" : "Edit") {
+                state.device.editingProfile = name
+                state.saveDevice()
             }
-            Toggle("", isOn: Binding(get: { active }, set: { _ in state.toggleActive(name) }))
+            .buttonStyle(.glass)
+            .disabled(state.device.editingProfile == name)
+            Button(role: .destructive) { askDelete() } label: { Image(systemName: "trash") }
+                .buttonStyle(.borderless)
+                .opacity(name == "base" ? 0 : 1)
+                .disabled(name == "base")
+            Toggle("", isOn: Binding(
+                get: { on },
+                set: { _ in state.toggleActive(name) }))
                 .labelsHidden()
                 .toggleStyle(.switch)
-                .disabled(name == "base")
-                .help(name == "base" ? "Base is always on" : "Use this profile on this Mac")
+                .disabled(!needed.isEmpty)
+                .help(needed.isEmpty
+                      ? (on ? "Switch off on this Mac" : "Use this profile on this Mac")
+                      : "\(needed.map(\.capitalized).joined(separator: ", ")) builds on it")
         }
         .padding(.vertical, 2)
+    }
+
+    /// Other profiles this one may build on (no loops).
+    private func candidates(for name: String) -> [String] {
+        state.profileNames.filter { $0 != name && !state.resolve([$0]).contains(name) }
+    }
+
+    private func pill(_ text: String, _ color: Color) -> some View {
+        Text(text).font(.caption2.weight(.semibold))
+            .padding(.horizontal, 6).padding(.vertical, 1)
+            .background(color.opacity(0.18), in: .capsule)
+            .foregroundStyle(color)
     }
 }

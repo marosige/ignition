@@ -33,7 +33,7 @@ struct OverviewView: View {
                     }
                 } else {
                     card("This Mac is “\(state.device.deviceName)”",
-                         "Active profiles: " + state.device.activeProfiles.map(\.capitalized).joined(separator: " → ") + ". Change settings anywhere in the sidebar, then use Save to GitHub; on your other Macs pull and Apply.",
+                         "Active profiles: " + state.layers.map(\.capitalized).joined(separator: " → ") + ". Change settings anywhere in the sidebar, then use Save to GitHub; on your other Macs pull and Apply.",
                          "laptopcomputer", goTo: .sync)
                     summary
                 }
@@ -50,7 +50,7 @@ struct OverviewView: View {
             stat("\(e.preferences.count)", "saved settings", "slider.horizontal.3")
             stat("\((e.dock ?? []).filter { $0.kind == .app }.count)", "apps in Dock", "dock.rectangle")
             stat("\(e.packages.casks.count + e.packages.brews.count + e.packages.mas.count)", "packages", "shippingbox")
-            stat("\(Dotfiles.scan(profiles: state.device.activeProfiles, copyFiles: e.copyFiles).count)", "dotfiles", "doc.text")
+            stat("\(Dotfiles.scan(profiles: state.layers, copyFiles: e.copyFiles).count)", "dotfiles", "doc.text")
             stat("\(e.directories.count)", "folders", "folder")
             stat("\(e.startup.apps.count)", "login apps", "power")
         }
@@ -141,7 +141,7 @@ struct ApplyView: View {
                         }
                     }
                 } header: {
-                    Text("Turn \(state.device.deviceName) into your \(state.device.activeProfiles.joined(separator: " + ")) Mac")
+                    Text("Turn \(state.device.deviceName) into your \(state.layers.map(\.capitalized).joined(separator: " + ")) Mac")
                 } footer: {
                     Text("Settings that need administrator rights ask for your password once.")
                 }
@@ -195,7 +195,7 @@ struct ApplyView: View {
         output = []
         results = [:]
         let profile = state.effective
-        let names = state.device.activeProfiles
+        let names = state.layers
         let selected = self.selected
         let live = LineSink { line in Task { @MainActor in output.append(line) } }
 
