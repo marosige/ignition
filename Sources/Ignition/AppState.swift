@@ -197,6 +197,14 @@ final class AppState: ObservableObject {
         editing = p
     }
 
+    /// Puts a value that is only set on this Mac into a profile, without touching the system.
+    func adopt(_ def: PreferenceDef, into profileName: String) {
+        guard var profile = profiles[profileName], let value = live[def.id] ?? def.osDefault else { return }
+        profile.preferences[def.id] = value
+        profiles[profileName] = profile
+        persist(profileName)
+    }
+
     /// Drops the setting from the profile and puts the Mac back to its macOS default.
     func reset(_ def: PreferenceDef) {
         var p = editing

@@ -74,8 +74,28 @@ struct PreferenceRow: View {
             Text(isDefault ? "Same as the macOS default" : "macOS default: \(state.defaultText(def))")
                 .font(.caption).foregroundStyle(.secondary)
         } else if !isDefault, def.osDefault != nil {
-            Text("Set on this Mac, not in your profile · macOS default: \(state.defaultText(def))")
-                .font(.caption).foregroundStyle(.orange)
+            HStack(spacing: 8) {
+                Text("Set on this Mac, not in your profile · macOS default: \(state.defaultText(def))")
+                    .font(.caption).foregroundStyle(.orange)
+                addToProfile
+            }
+        }
+    }
+
+    /// One button for a single active profile, a menu when there are several.
+    @ViewBuilder
+    private var addToProfile: some View {
+        let names = state.device.activeProfiles
+        if names.count == 1, let only = names.first {
+            Button("Add to \(only.capitalized)") { state.adopt(def, into: only) }
+                .buttonStyle(.glass).controlSize(.small)
+        } else if names.count > 1 {
+            Menu("Add to profile") {
+                ForEach(names, id: \.self) { name in
+                    Button(name.capitalized) { state.adopt(def, into: name) }
+                }
+            }
+            .menuStyle(.button).buttonStyle(.glass).controlSize(.small).fixedSize()
         }
     }
 

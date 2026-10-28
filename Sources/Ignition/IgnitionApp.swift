@@ -210,23 +210,16 @@ struct ProfileMenu: View {
 
     var body: some View {
         Menu {
-            Section("Active on this Mac") {
-                ForEach(state.profileNames, id: \.self) { name in
-                    Toggle(name.capitalized, isOn: Binding(
-                        get: { state.device.activeProfiles.contains(name) },
-                        set: { _ in state.toggleActive(name) }))
-                }
+            Picker("Changes are saved into", selection: $state.device.editingProfile) {
+                ForEach(state.device.activeProfiles, id: \.self) { Text($0.capitalized).tag($0) }
             }
-            Section("Changes are saved into") {
-                Picker("Editing", selection: $state.device.editingProfile) {
-                    ForEach(state.profileNames, id: \.self) { Text($0.capitalized).tag($0) }
-                }
-                .pickerStyle(.inline)
-            }
+            .pickerStyle(.inline)
+            Divider()
+            Button("Manage Profiles…") { state.navigate(to: .profiles) }
         } label: {
             Label("Saving to \(state.device.editingProfile.capitalized)", systemImage: "square.stack.3d.up")
         }
-        .help("Profiles are layered: Base first, then the others on top.")
+        .help("Profiles are layered: Base first, then the others on top. Which ones are active on this Mac is set under Profiles.")
         .onChange(of: state.device.editingProfile) { _, _ in state.saveDevice() }
     }
 }
