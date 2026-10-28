@@ -30,7 +30,7 @@ struct SyncView: View {
                 DisclosureGroup("Advanced", isExpanded: $showAdvanced) {
                     TextField("Config folder in the repo", text: $state.device.configFolder, prompt: Text("ignition"))
                     TextField("Branch", text: $state.device.branch, prompt: Text("Repository default"))
-                    Text("Share one repo with others? Give each person their own folder or branch. A branch that does not exist yet is created on the first save.")
+                    Text("A branch that does not exist yet is created on the first save.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 HStack {
@@ -202,6 +202,7 @@ struct DiffSheet: View {
             } else if diffs.isEmpty {
                 ContentUnavailableView(side == .mine ? "Nothing changed on this Mac" : "Nothing new on GitHub",
                                        systemImage: "checkmark.circle")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 18) {
@@ -216,7 +217,7 @@ struct DiffSheet: View {
                 }
             }
         }
-        .frame(width: 720, height: 560)
+        .frame(width: 720, height: 560, alignment: .top)
         .task(id: side) { await load() }
     }
 
