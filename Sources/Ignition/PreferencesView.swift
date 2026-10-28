@@ -104,7 +104,8 @@ struct PreferenceRow: View {
                 ForEach(options, id: \.self) { Text($0.label).tag($0.value) }
             }
             .labelsHidden()
-            .frame(maxWidth: 260)
+            .pickerStyle(.menu)
+            .fixedSize()
         case .text(let placeholder):
             CommitTextField(placeholder: placeholder, initial: current?.stringValue ?? "") {
                 state.set(def, to: .string($0))
