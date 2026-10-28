@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import IgnitionCore
 
 // MARK: - Overview
@@ -182,6 +183,23 @@ struct ApplyView: View {
                     Text("Turn \(state.device.deviceName) into your \(state.device.activeProfiles.joined(separator: " + ")) Mac")
                 } footer: {
                     Text("Settings that need administrator rights ask for your password once.")
+                }
+                let reminders = ManualSettings.all.filter { state.effective.manualNotes[$0.id] != nil }
+                if !reminders.isEmpty {
+                    Section {
+                        ForEach(reminders) { item in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(item.title).font(.headline)
+                                    Spacer()
+                                    Button("Open System Settings") {
+                                        if let url = URL(string: item.settingsURL) { NSWorkspace.shared.open(url) }
+                                    }.buttonStyle(.glass)
+                                }
+                                Text(state.effective.manualNotes[item.id] ?? "").foregroundStyle(.secondary)
+                            }
+                        }
+                    } header: { Text("Do by hand") } footer: { Text("macOS does not allow scripts to change these.") }
                 }
                 Section {
                     Button { Task { await run() } } label: {

@@ -186,11 +186,13 @@ public struct Profile: Codable, Equatable {
     public var startup = Startup()
     /// Dotfiles (paths relative to $HOME) that must be copied instead of symlinked.
     public var copyFiles: [String] = []
+    /// What I want for settings macOS does not let scripts change (see `ManualSettings`).
+    public var manualNotes: [String: String] = [:]
 
     public init(title: String = "") { self.title = title }
 
     enum CodingKeys: String, CodingKey {
-        case title, preferences, dock, finderSidebar, directories, packages, startup, copyFiles
+        case title, preferences, dock, finderSidebar, directories, packages, startup, copyFiles, manualNotes
     }
 
     public init(from decoder: Decoder) throws {
@@ -203,6 +205,7 @@ public struct Profile: Codable, Equatable {
         packages = try c.decodeIfPresent(Packages.self, forKey: .packages) ?? Packages()
         startup = try c.decodeIfPresent(Startup.self, forKey: .startup) ?? Startup()
         copyFiles = try c.decodeIfPresent([String].self, forKey: .copyFiles) ?? []
+        manualNotes = try c.decodeIfPresent([String: String].self, forKey: .manualNotes) ?? [:]
     }
 
     /// Layers profiles in order; later ones win.
@@ -225,6 +228,7 @@ public struct Profile: Codable, Equatable {
             result.startup.apps = unique(result.startup.apps + layer.startup.apps)
             result.startup.closeFinderWindows = result.startup.closeFinderWindows || layer.startup.closeFinderWindows
             result.copyFiles = unique(result.copyFiles + layer.copyFiles)
+            result.manualNotes.merge(layer.manualNotes) { _, new in new }
         }
         return result
     }

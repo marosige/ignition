@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import IgnitionCore
 
 /// Looks like a System Settings pane: grouped form, one section per topic.
@@ -12,6 +13,9 @@ struct PreferencesView: View {
                 Section(section.name) {
                     ForEach(section.defs) { def in PreferenceRow(def: def) }
                 }
+            }
+            ForEach(ManualSettings.items(in: category)) { item in
+                ManualSettingSection(item: item)
             }
             Section {
                 Button("Reset all in \(category.title) to macOS defaults", role: .destructive) {
@@ -135,5 +139,48 @@ struct CommitTextField: View {
             .onSubmit { commit(text) }
             .onAppear { text = initial }
             .onChange(of: initial) { _, new in text = new }
+    }
+}
+
+/// A setting only the user can change, with a shortcut to the right System Settings pane.
+struct ManualSettingSection: View {
+    @EnvironmentObject var state: AppState
+    let item: ManualSetting
+    @State private var text = ""
+
+    var body: some View {
+        Section {
+            Label {
+                Text("Not scriptable – set it by hand in System Settings.")
+            } icon: {
+                Image(systemName: "hand.point.up.left")
+            }
+            .foregroundStyle(.secondary)
+            Button {
+                if let url = URL(string: item.settingsURL) { NSWorkspace.shared.open(url) }
+            } label: {
+                Label("Open System Settings", systemImage: "arrow.up.forward.app")
+            }
+            .buttonStyle(.glass)
+            TextEditor(text: $text)
+                .font(.body)
+                .frame(minHeight: 80)
+                .scrollContentBackground(.hidden)
+                .overlay(alignment: .topLeading) {
+                    if text.isEmpty {
+                        Text(item.placeholder).foregroundStyle(.tertiary).padding(.top, 8).padding(.leading, 5).allowsHitTesting(false)
+                    }
+                }
+                .onChange(of: text) { _, new in
+                    var p = state.editing
+                    p.manualNotes[item.id] = new.isEmpty ? nil : new
+                    state.editing = p
+                }
+        } header: {
+            Text(item.title)
+        } footer: {
+            Text(item.detail)
+        }
+        .onAppear { text = state.effective.manualNotes[item.id] ?? "" }
     }
 }
