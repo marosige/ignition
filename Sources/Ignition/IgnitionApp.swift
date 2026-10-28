@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import IgnitionCore
 
 @main
@@ -30,21 +31,26 @@ enum Destination: Hashable {
 
 struct ContentView: View {
     @EnvironmentObject var state: AppState
-    @State private var selection: Destination? = .overview
     @State private var homebrewExpanded = true
 
     var body: some View {
         NavigationSplitView {
-            SidebarView(selection: $selection, homebrewExpanded: $homebrewExpanded)
+            SidebarView(selection: $state.destination, homebrewExpanded: $homebrewExpanded)
                 .navigationSplitViewColumnWidth(min: 230, ideal: 250, max: 300)
         } detail: {
             NavigationStack {
-                DetailRouter(destination: selection ?? .overview)
+                DetailRouter(destination: state.destination ?? .overview)
             }
         }
         .toolbar {
             ToolbarItem(placement: .automatic) { ProfileMenu() }
             ToolbarItem(placement: .automatic) { SyncButton() }
+        }
+        .sheet(isPresented: $state.showConflicts) { ConflictSheet() }
+        .sheet(isPresented: $state.showDiff) { DiffSheet() }
+        .task { await state.checkSync() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { await state.checkSync() }
         }
         .alert("Something went wrong", isPresented: Binding(
             get: { state.errorMessage != nil },
@@ -106,13 +112,20 @@ struct SidebarView: View {
             }
             Section {
                 Label("Overview", systemImage: "flame").tag(Destination.overview)
-                Label("GitHub Sync", systemImage: "arrow.triangle.2.circlepath.icloud")
-                    .badge(state.changedFiles.count).tag(Destination.sync)
+                Label {
+                    Text("GitHub Sync")
+                } icon: {
+                    Image(systemName: state.syncKind.symbol).foregroundStyle(state.syncKind.color)
+                }
+                .badge(state.changedFiles.count)
+                .tag(Destination.sync)
                 Label("Apply to this Mac", systemImage: "play.circle").tag(Destination.apply)
             }
             Section("Settings") {
                 ForEach(PrefCategory.allCases.filter { !PreferenceCatalog.defs(in: $0).isEmpty }) { c in
-                    Label(c.title, systemImage: c.symbol).tag(Destination.pref(c))
+                    Label(c.title, systemImage: c.symbol)
+                        .badge(state.savedCount(in: c))
+                        .tag(Destination.pref(c))
                 }
             }
             Section("Layout") {
@@ -189,13 +202,64 @@ struct SyncButton: View {
     @EnvironmentObject var state: AppState
 
     var body: some View {
+        let kind = state.syncKind
         Button {
-            Task { await state.push() }
+            Task { await state.syncPrimary() }
         } label: {
-            Label(state.changedFiles.isEmpty ? "In sync" : "Save to GitHub (\(state.changedFiles.count))",
-                  systemImage: state.changedFiles.isEmpty ? "checkmark.icloud" : "icloud.and.arrow.up")
+            Label {
+                Text(kind.buttonTitle(changes: state.changedFiles.count))
+            } icon: {
+                Image(systemName: kind.symbol).foregroundStyle(kind.color)
+            }
         }
-        .disabled(state.sync == nil || state.busy)
-        .help("Commit and push the configuration changes")
+        .disabled(state.busy)
+        .help(kind.summary)
+    }
+}
+
+extension SyncKind {
+    var color: Color {
+        switch self {
+        case .upToDate: return .green
+        case .needsPush, .needsPull, .diverged: return .orange
+        case .conflict, .error: return .red
+        case .unconfigured, .notConnected: return .secondary
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .upToDate: return "checkmark.icloud.fill"
+        case .needsPush: return "icloud.and.arrow.up.fill"
+        case .needsPull: return "icloud.and.arrow.down.fill"
+        case .diverged: return "arrow.triangle.2.circlepath.icloud.fill"
+        case .conflict, .error: return "exclamationmark.icloud.fill"
+        case .unconfigured, .notConnected: return "icloud.slash"
+        }
+    }
+
+    var summary: String {
+        switch self {
+        case .upToDate: return "Everything is in sync with GitHub"
+        case .needsPush: return "You have changes that are not on GitHub yet"
+        case .needsPull: return "GitHub has newer changes"
+        case .diverged: return "Both this Mac and GitHub have new changes"
+        case .conflict: return "Changes collide – choose which version to keep"
+        case .error: return "Cannot reach GitHub"
+        case .unconfigured: return "GitHub is not set up yet"
+        case .notConnected: return "Not connected to the repository"
+        }
+    }
+
+    func buttonTitle(changes: Int) -> String {
+        switch self {
+        case .upToDate: return "In sync"
+        case .needsPush: return changes > 0 ? "Save to GitHub (\(changes))" : "Save to GitHub"
+        case .needsPull: return "Pull updates"
+        case .diverged: return "Sync with GitHub"
+        case .conflict: return "Resolve conflicts"
+        case .error: return "Retry sync"
+        case .unconfigured, .notConnected: return "Set up GitHub"
+        }
     }
 }

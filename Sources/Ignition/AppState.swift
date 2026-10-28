@@ -1,20 +1,37 @@
 import SwiftUI
 import IgnitionCore
 
+/// One profile that sets a preference.
+struct PrefOrigin: Identifiable {
+    let profile: String
+    let value: PrefValue
+    /// Differs from what is committed in the repo.
+    let unsaved: Bool
+    var id: String { profile }
+}
+
 @MainActor
 final class AppState: ObservableObject {
+    @Published var destination: Destination? = .overview
     @Published var device: DeviceConfig
     @Published var profiles: [String: Profile] = [:]
+    @Published var committed: [String: Profile] = [:]
     @Published var profileNames: [String] = []
     @Published var live: [String: PrefValue] = [:]
     @Published var token: String
     @Published var changedFiles: [String] = []
     @Published var commits: [String] = []
+    @Published var syncInfo: SyncInfo?
+    @Published var showConflicts = false
+    @Published var showDiff = false
     @Published var busy = false
     @Published var status: String?
     @Published var errorMessage: String?
     @Published var log: [String] = []
     @Published var connected = false
+
+    private var pendingRestart = Set<ProcessToRestart>()
+    private var restartTask: Task<Void, Never>?
 
     init() {
         let device = ConfigStore.loadDevice()
@@ -73,6 +90,7 @@ final class AppState: ObservableObject {
     }
 
     func saveDevice() {
+        device.configFolder = AppPaths.normalizeFolder(device.configFolder)
         ConfigStore.saveDevice(device)
     }
 
@@ -95,10 +113,44 @@ final class AppState: ObservableObject {
         effective.preferences[def.id] != nil
     }
 
+    func isManagedByEditing(_ def: PreferenceDef) -> Bool {
+        editing.preferences[def.id] != nil
+    }
+
+    /// Every active profile that sets this preference, in layering order (the last one wins).
+    func origins(for def: PreferenceDef) -> [PrefOrigin] {
+        device.activeProfiles.compactMap { name in
+            guard let value = profiles[name]?.preferences[def.id] else { return nil }
+            let unsaved = connected && committed[name]?.preferences[def.id] != value
+            return PrefOrigin(profile: name, value: value, unsaved: unsaved)
+        }
+    }
+
+    func savedCount(in category: PrefCategory) -> Int {
+        PreferenceCatalog.defs(in: category).filter { isManaged($0) }.count
+    }
+
+    /// Human readable value ("Genie effect", "32 px", "On").
+    func formatted(_ def: PreferenceDef, _ value: PrefValue?) -> String {
+        guard let value else { return "not set" }
+        switch def.control {
+        case .toggle: return value.boolValue == true ? "On" : "Off"
+        case .picker(let options): return options.first { $0.value == value }?.label ?? value.description
+        case .slider(_, _, let unit):
+            if let d = value.doubleValue, case .double? = def.osDefault { return String(format: "%.1f", d) + unit }
+            return "\(value.intValue ?? 0)" + (unit.isEmpty ? "" : " " + unit)
+        case .text: return value.stringValue?.isEmpty == false ? value.stringValue! : "–"
+        }
+    }
+
+    func defaultText(_ def: PreferenceDef) -> String {
+        def.osDefault == nil ? "decided by macOS" : formatted(def, def.osDefault)
+    }
+
     func set(_ def: PreferenceDef, to value: PrefValue) {
         let r = DefaultsService.write(def, value)
         if !r.ok { errorMessage = "\(def.title): \(r.combined)"; return }
-        DefaultsService.restart(Set(def.restart))
+        scheduleRestart(def.restart)
         live[def.id] = value
         var p = editing
         p.preferences[def.id] = value
@@ -115,8 +167,22 @@ final class AppState: ObservableObject {
             live[def.id] = inherited
         } else {
             _ = DefaultsService.reset(def)
-            DefaultsService.restart(Set(def.restart))
             live[def.id] = DefaultsService.read(def)
+        }
+        scheduleRestart(def.restart)
+    }
+
+    /// Stepper clicks come in bursts; restart Dock/Finder once things settle.
+    private func scheduleRestart(_ processes: [ProcessToRestart]) {
+        guard !processes.isEmpty else { return }
+        pendingRestart.formUnion(processes)
+        restartTask?.cancel()
+        restartTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            guard !Task.isCancelled, let self else { return }
+            let pending = self.pendingRestart
+            self.pendingRestart = []
+            DefaultsService.restart(pending)
         }
     }
 
@@ -124,7 +190,14 @@ final class AppState: ObservableObject {
 
     var sync: GitSync? {
         guard !device.repository.isEmpty, !token.isEmpty else { return nil }
-        return GitSync(repository: device.repository, token: token, deviceName: device.deviceName)
+        return GitSync(repository: device.repository, token: token, deviceName: device.deviceName,
+                       branch: device.branch, configFolder: device.configFolder)
+    }
+
+    var syncKind: SyncKind {
+        if sync == nil { return .unconfigured }
+        if !connected { return .notConnected }
+        return syncInfo?.kind ?? .upToDate
     }
 
     func saveCredentials() {
@@ -132,11 +205,33 @@ final class AppState: ObservableObject {
         saveDevice()
     }
 
+    /// Cheap, local only: used after every edit.
     func refreshChanges() {
-        guard FileManager.default.fileExists(atPath: AppPaths.repo.appendingPathComponent(".git").path),
-              let sync else { changedFiles = []; return }
+        guard connected, let sync else { changedFiles = []; return }
         changedFiles = sync.changedFiles()
-        commits = sync.log()
+        syncInfo?.changedFiles = changedFiles
+    }
+
+    /// Compares with GitHub (fetches) and refreshes what each setting says about being saved.
+    func checkSync(fetch: Bool = true) async {
+        guard connected, let sync else { syncInfo = nil; return }
+        let names = profileNames
+        let folder = AppPaths.normalizeFolder(device.configFolder)
+        let result = await Task.detached(priority: .utility) { () -> (SyncInfo, [String], [String: Profile]) in
+            let info = sync.check(fetch: fetch)
+            var saved: [String: Profile] = [:]
+            for name in names {
+                if let data = sync.committedFile("\(folder)/profiles/\(name)/profile.json"),
+                   let profile = try? JSONDecoder().decode(Profile.self, from: data) {
+                    saved[name] = profile
+                }
+            }
+            return (info, sync.log(), saved)
+        }.value
+        syncInfo = result.0
+        changedFiles = result.0.changedFiles
+        commits = result.1
+        committed = result.2
     }
 
     func connect() async {
@@ -144,31 +239,68 @@ final class AppState: ObservableObject {
         guard let sync else { errorMessage = "Enter the repository and the access token first."; return }
         await work("Connecting…") {
             let r = sync.connect()
-            guard r.ok else { return r.combined }
-            let pull = sync.pull()
-            return pull.ok ? nil : pull.combined
+            return r.ok ? nil : r.combined
         }
         connected = FileManager.default.fileExists(atPath: AppPaths.repo.appendingPathComponent(".git").path)
+        let out = await Task.detached { sync.sync(push: false) }.value
+        if case .failed(let m) = out, !m.isEmpty { errorMessage = m }
+        if case .conflicts = out { showConflicts = true }
         reloadProfiles()
+        await checkSync()
     }
 
-    func pull() async {
+    /// The one button: does whatever the current state needs.
+    func syncPrimary() async {
+        guard sync != nil else { destination = .sync; return }
+        guard let info = syncInfo else { await checkSync(); return }
+        switch info.kind {
+        case .conflict: showConflicts = true
+        case .upToDate, .error, .unconfigured, .notConnected: await checkSync()
+        case .needsPull: await runSync(push: false)
+        case .needsPush, .diverged: await runSync(push: true)
+        }
+    }
+
+    func runSync(push: Bool) async {
         guard let sync else { return }
-        await work("Pulling latest configuration…") {
-            let r = sync.pull()
-            return r.ok ? nil : r.combined
+        busy = true
+        status = push ? "Syncing with GitHub…" : "Pulling updates…"
+        let outcome = await Task.detached(priority: .userInitiated) { sync.sync(push: push) }.value
+        busy = false
+        status = nil
+        switch outcome {
+        case .done: break
+        case .conflicts: showConflicts = true
+        case .failed(let m): errorMessage = m
         }
         reloadProfiles()
         refreshLive()
+        await checkSync(fetch: false)
     }
 
-    func push() async {
+    func finishConflicts(choices: [String: Bool]) async {
         guard let sync else { return }
-        await work("Saving to GitHub…") {
-            let r = sync.commitAndPush()
-            return r.ok ? nil : r.combined
-        }
-        refreshChanges()
+        busy = true
+        status = "Finishing the merge…"
+        let outcome = await Task.detached { () -> SyncOutcome in
+            for (file, mine) in choices { sync.resolve(file, useMine: mine) }
+            return sync.finishMerge()
+        }.value
+        busy = false
+        status = nil
+        if case .failed(let m) = outcome { errorMessage = m }
+        showConflicts = false
+        reloadProfiles()
+        refreshLive()
+        await checkSync()
+    }
+
+    func abortMerge() async {
+        guard let sync else { return }
+        await Task.detached { sync.abortMerge() }.value
+        showConflicts = false
+        reloadProfiles()
+        await checkSync(fetch: false)
     }
 
     func loadStarterConfig() {

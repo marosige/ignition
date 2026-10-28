@@ -45,4 +45,16 @@ final class IgnitionCoreTests: XCTestCase {
         XCTAssertTrue(text.contains("cask \"fork\" # git client"))
         XCTAssertTrue(text.contains("mas \"Magnet\", id: 1"))
     }
+
+    func testConfigFolderIsNormalized() {
+        XCTAssertEqual(AppPaths.normalizeFolder("/ignition/"), "ignition")
+        XCTAssertEqual(AppPaths.normalizeFolder("../x/./y"), "x/y")
+        XCTAssertEqual(AppPaths.normalizeFolder(""), "ignition")
+    }
+
+    func testCommitMessageUsesCustomFolder() {
+        let sync = GitSync(repository: "a/b", token: "t", deviceName: "Mac mini", configFolder: "me/mac")
+        let msg = sync.commitMessage(for: ["me/mac/profiles/base/profile.json", "me/mac/profiles/work/dotfiles/.zshrc"])
+        XCTAssertTrue(msg.hasPrefix("[Mac mini] Update base (settings), work (dotfiles)"))
+    }
 }

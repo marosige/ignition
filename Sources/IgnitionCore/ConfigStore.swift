@@ -11,12 +11,14 @@ public enum ConfigStore {
     public static func loadDevice() -> DeviceConfig {
         if let data = try? Data(contentsOf: AppPaths.device),
            let device = try? JSONDecoder().decode(DeviceConfig.self, from: data) {
+            AppPaths.configFolder = AppPaths.normalizeFolder(device.configFolder)
             return device
         }
         return DeviceConfig(deviceName: Host.current().localizedName ?? "Mac")
     }
 
     public static func saveDevice(_ device: DeviceConfig) {
+        AppPaths.configFolder = AppPaths.normalizeFolder(device.configFolder)
         guard let data = try? encoder.encode(device) else { return }
         try? data.write(to: AppPaths.device, options: .atomic)
     }

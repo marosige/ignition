@@ -250,9 +250,27 @@ public struct Profile: Codable, Equatable {
 public struct DeviceConfig: Codable, Equatable {
     public var deviceName: String
     public var repository: String = ""
+    /// Folder inside the repo that holds Ignition's data.
+    public var configFolder: String = "ignition"
+    /// Branch to sync. Empty means the repository's default branch.
+    public var branch: String = ""
     /// Profile names layered in order. `base` should normally come first.
     public var activeProfiles: [String] = ["base"]
     public var editingProfile: String = "base"
 
     public init(deviceName: String) { self.deviceName = deviceName }
+
+    enum CodingKeys: String, CodingKey {
+        case deviceName, repository, configFolder, branch, activeProfiles, editingProfile
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        deviceName = try c.decodeIfPresent(String.self, forKey: .deviceName) ?? (Host.current().localizedName ?? "Mac")
+        repository = try c.decodeIfPresent(String.self, forKey: .repository) ?? ""
+        configFolder = try c.decodeIfPresent(String.self, forKey: .configFolder) ?? "ignition"
+        branch = try c.decodeIfPresent(String.self, forKey: .branch) ?? ""
+        activeProfiles = try c.decodeIfPresent([String].self, forKey: .activeProfiles) ?? ["base"]
+        editingProfile = try c.decodeIfPresent(String.self, forKey: .editingProfile) ?? "base"
+    }
 }

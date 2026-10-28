@@ -17,12 +17,12 @@ struct OverviewView: View {
                         .glassEffect(.regular, in: .rect(cornerRadius: 24))
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Ignition").font(.largeTitle.bold())
-                        Text("Your Mac, reproducible.").foregroundStyle(.secondary)
+                        Text("Ignite your Mac.").font(.title3).foregroundStyle(.secondary)
                     }
                 }
 
                 if !state.connected {
-                    card("1  Connect your private config repo", "Paste the repository and a fine-grained access token (Contents: read & write). Your whole setup lives in the `ignition/` folder of that repo.", "icloud.and.arrow.down")
+                    card("1  Connect your private config repo", "Paste the repository and a fine-grained access token (Contents: read & write). Your whole setup lives in a folder of that repo (default `ignition/`).", "icloud.and.arrow.down", goTo: .sync)
                 } else if !state.hasConfig {
                     VStack(alignment: .leading, spacing: 10) {
                         card("2  Start from a configuration", "The repo has no Ignition data yet. Begin with the bundled starter (the original author’s Base, Personal and Work profiles) or an empty Base profile.", "square.and.arrow.down")
@@ -34,7 +34,7 @@ struct OverviewView: View {
                 } else {
                     card("This Mac is “\(state.device.deviceName)”",
                          "Active profiles: " + state.device.activeProfiles.map(\.capitalized).joined(separator: " → ") + ". Change settings anywhere in the sidebar, then use Save to GitHub; on your other Macs pull and Apply.",
-                         "laptopcomputer")
+                         "laptopcomputer", goTo: .sync)
                     summary
                 }
             }
@@ -67,73 +67,34 @@ struct OverviewView: View {
         .glassEffect(.regular, in: .rect(cornerRadius: 16))
     }
 
-    private func card(_ title: String, _ text: String, _ icon: String) -> some View {
-        HStack(alignment: .top, spacing: 14) {
+    private func card(_ title: String, _ text: String, _ icon: String, goTo: Destination? = nil) -> some View {
+        let content = HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon).font(.title2).frame(width: 30)
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).font(.headline)
-                Text(text).foregroundStyle(.secondary)
+                Text(text).foregroundStyle(.secondary).multilineTextAlignment(.leading)
+            }
+            if goTo != nil {
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
             }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassEffect(.regular, in: .rect(cornerRadius: 18))
+        return Group {
+            if let goTo {
+                Button { state.destination = goTo } label: { content }
+                    .buttonStyle(.plain)
+                    .contentShape(.rect(cornerRadius: 18))
+            } else {
+                content
+            }
+        }
     }
 }
 
 // MARK: - Sync
-
-struct SyncView: View {
-    @EnvironmentObject var state: AppState
-
-    var body: some View {
-        Form {
-            Section {
-                TextField("Repository", text: $state.device.repository, prompt: Text("owner/repo or GitHub URL"))
-                SecureField("Fine-grained personal access token", text: $state.token)
-                TextField("Device name", text: $state.device.deviceName, prompt: Text("Mac mini"))
-            } header: {
-                Text("Connection")
-            } footer: {
-                Text("The token needs access to this one repository with Contents: Read and write. It is stored in your Keychain. The device name appears in every commit, so you can see which Mac changed what.")
-            }
-            Section {
-                HStack {
-                    Button(state.connected ? "Reconnect" : "Connect") { Task { await state.connect() } }
-                        .buttonStyle(.glassProminent)
-                    Button("Pull") { Task { await state.pull() } }.disabled(!state.connected || state.busy)
-                    Button("Save to GitHub") { Task { await state.push() } }.disabled(!state.connected || state.busy)
-                }
-            }
-            if !state.changedFiles.isEmpty {
-                Section("Waiting to be saved (\(state.changedFiles.count))") {
-                    ForEach(state.changedFiles, id: \.self) { Text($0).font(.caption.monospaced()) }
-                }
-            }
-            if !state.commits.isEmpty {
-                Section("History") {
-                    ForEach(state.commits, id: \.self) { Text($0).font(.caption.monospaced()).lineLimit(1) }
-                }
-            }
-            Section("Profiles") {
-                ForEach(state.profileNames, id: \.self) { name in
-                    Toggle(isOn: Binding(get: { state.device.activeProfiles.contains(name) }, set: { _ in state.toggleActive(name) })) {
-                        VStack(alignment: .leading) {
-                            Text(name.capitalized)
-                            Text(name == "base" ? "Shared by every Mac" : "Layered on top of Base").font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    .disabled(name == "base")
-                }
-                NewProfileRow()
-            }
-        }
-        .formStyle(.grouped)
-        .navigationTitle("GitHub Sync")
-        .onChange(of: state.device.deviceName) { _, _ in state.saveDevice() }
-        .onAppear { state.refreshChanges() }
-    }
-}
 
 struct NewProfileRow: View {
     @EnvironmentObject var state: AppState

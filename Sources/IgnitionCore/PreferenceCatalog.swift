@@ -160,9 +160,9 @@ public enum PreferenceCatalog {
 
         // MARK: Desktop & Dock
         let dock = "com.apple.dock"
-        slider("dock.tilesize", .desktopDock, "Dock", "Size", domain: dock, key: "tilesize", 16...128, unit: "px", default: .int(48), restart: [.dock])
+        slider("dock.tilesize", .desktopDock, "Dock", "Size", domain: dock, key: "tilesize", 16...128, step: 4, unit: "px", default: .int(48), restart: [.dock])
         toggle("dock.magnification", .desktopDock, "Dock", "Magnification", domain: dock, key: "magnification", default: false, restart: [.dock])
-        slider("dock.largesize", .desktopDock, "Dock", "Magnified size", domain: dock, key: "largesize", 16...128, unit: "px", default: .int(128), restart: [.dock])
+        slider("dock.largesize", .desktopDock, "Dock", "Magnified size", domain: dock, key: "largesize", 16...128, step: 4, unit: "px", default: .int(128), restart: [.dock])
         picker("dock.orientation", .desktopDock, "Dock", "Position on screen", domain: dock, key: "orientation",
                [.init(.string("left"), "Left"), .init(.string("bottom"), "Bottom"), .init(.string("right"), "Right")],
                default: .string("bottom"), restart: [.dock])

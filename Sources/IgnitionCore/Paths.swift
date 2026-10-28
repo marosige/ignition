@@ -9,8 +9,15 @@ public enum AppPaths {
     }
     /// Local clone of the private config repository.
     public static var repo: URL { support.appendingPathComponent("repo", isDirectory: true) }
-    /// Root folder of Ignition's data inside the repo.
-    public static var configRoot: URL { repo.appendingPathComponent("ignition", isDirectory: true) }
+    /// Folder inside the repo that holds Ignition's data (configurable, default `ignition`).
+    public static var configFolder = "ignition"
+    public static var configRoot: URL { repo.appendingPathComponent(configFolder, isDirectory: true) }
+
+    /// Trims slashes and refuses paths that would leave the repo.
+    public static func normalizeFolder(_ input: String) -> String {
+        let parts = input.split(separator: "/").map(String.init).filter { $0 != "." && $0 != ".." && !$0.isEmpty }
+        return parts.isEmpty ? "ignition" : parts.joined(separator: "/")
+    }
     public static var profiles: URL { configRoot.appendingPathComponent("profiles", isDirectory: true) }
     public static var device: URL { support.appendingPathComponent("device.json") }
     public static var cache: URL {
