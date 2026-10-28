@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# Builds build/Ignition.app (needs Xcode 26 / Swift 6.2 on macOS 26).
+# Builds build/Ignition.app (Swift 6.2 on macOS 26; UNIVERSAL=1 needs full Xcode).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-swift build -c release --arch arm64 --arch x86_64
-BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/Ignition"
+# Universal binaries need Xcode (xcbuild); by default build for this Mac only.
+ARCHS=()
+if [ "${UNIVERSAL:-0}" = "1" ]; then ARCHS=(--arch arm64 --arch x86_64); fi
+
+swift build -c release ${ARCHS[@]+"${ARCHS[@]}"}
+BIN="$(swift build -c release ${ARCHS[@]+"${ARCHS[@]}"} --show-bin-path)/Ignition"
 
 APP="build/Ignition.app"
 rm -rf "$APP"
