@@ -192,7 +192,6 @@ struct OriginPill: View {
                 } else {
                     Text(state.profileNames.count > 1 ? origin.profile.capitalized : "Saved")
                 }
-                Text("·").opacity(0.6)
                 Text(state.formatted(def, origin.value))
             }
             .font(.caption2.weight(.semibold))
