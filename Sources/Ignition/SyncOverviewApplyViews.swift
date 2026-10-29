@@ -194,8 +194,9 @@ struct ApplyView: View {
                 }
             }
             .formStyle(.grouped)
-            .frame(maxHeight: 480)
+            .frame(maxHeight: .infinity)
 
+            if running || !output.isEmpty {
             ScrollViewReader { proxy in
                 ScrollView {
                     Text(output.joined(separator: "\n"))
@@ -208,6 +209,8 @@ struct ApplyView: View {
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(.quaternary))
                 .padding([.horizontal, .bottom])
                 .onChange(of: output.count) { _, _ in proxy.scrollTo("end", anchor: .bottom) }
+            }
+            .frame(height: 200)
             }
         }
         .navigationTitle("Apply to this Mac")
