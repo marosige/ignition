@@ -148,7 +148,7 @@ struct SidebarView: View {
                 DisclosureGroup(isExpanded: $homebrewExpanded) {
                     Label("Discover", systemImage: "sparkle.magnifyingglass").tag(Destination.brewDiscover)
                     Label("Installed", systemImage: "checkmark.circle").tag(Destination.brewInstalled)
-                    Label("Brewfile", systemImage: "list.bullet.rectangle").tag(Destination.brewfile)
+                    Label("Profile Software", systemImage: "list.bullet.rectangle").tag(Destination.brewfile)
                 } label: {
                     Label("Homebrew", systemImage: "mug")
                 }

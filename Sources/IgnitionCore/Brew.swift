@@ -9,6 +9,15 @@ public struct BrewPackage: Identifiable, Hashable {
     public var homepage: String
     public var version: String
     public var id: String { "\(kind.rawValue):\(token)" }
+
+    public init(kind: Kind, token: String, name: String? = nil, desc: String = "", homepage: String = "", version: String = "") {
+        self.kind = kind
+        self.token = token
+        self.name = name ?? token
+        self.desc = desc
+        self.homepage = homepage
+        self.version = version
+    }
 }
 
 public enum Brew {

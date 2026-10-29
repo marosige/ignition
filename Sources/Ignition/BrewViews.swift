@@ -1,10 +1,60 @@
 import SwiftUI
+import AppKit
 import IgnitionCore
+
+// MARK: - What a package is, across Homebrew, the App Store and VS Code
+
+enum PackageRef: Hashable {
+    case cask(String), formula(String), mas(Int, String), vscode(String)
+
+    var title: String {
+        switch self {
+        case .cask(let t), .formula(let t), .vscode(let t): return t
+        case .mas(_, let name): return name
+        }
+    }
+
+    func contains(in p: Packages) -> Bool {
+        switch self {
+        case .cask(let t): return p.casks.contains { $0.name == t }
+        case .formula(let t): return p.brews.contains { $0.name == t }
+        case .mas(let id, _): return p.mas.contains { $0.id == id }
+        case .vscode(let t): return p.vscode.contains { $0.name == t }
+        }
+    }
+
+    func add(to p: inout Packages, comment: String?) {
+        guard !contains(in: p) else { return }
+        switch self {
+        case .cask(let t): p.casks.append(PackageEntry(name: t, comment: comment))
+        case .formula(let t): p.brews.append(PackageEntry(name: t, comment: comment))
+        case .mas(let id, let name): p.mas.append(MasEntry(id: id, name: name))
+        case .vscode(let t): p.vscode.append(PackageEntry(name: t, comment: comment))
+        }
+    }
+
+    func remove(from p: inout Packages) {
+        switch self {
+        case .cask(let t): p.casks.removeAll { $0.name == t }
+        case .formula(let t): p.brews.removeAll { $0.name == t }
+        case .mas(let id, _): p.mas.removeAll { $0.id == id }
+        case .vscode(let t): p.vscode.removeAll { $0.name == t }
+        }
+    }
+}
+
+extension BrewPackage {
+    var ref: PackageRef { kind == .cask ? .cask(token) : .formula(token) }
+}
+
+// MARK: - Store
 
 @MainActor
 final class BrewStore: ObservableObject {
     @Published var catalog: [BrewPackage] = []
     @Published var installed: [BrewPackage] = []
+    @Published var masInstalled: Set<Int> = []
+    @Published var vscodeInstalled: Set<String> = []
     @Published var loading = false
     @Published var loadError: String?
     @Published var logs: [String: [String]] = [:]
@@ -24,7 +74,33 @@ final class BrewStore: ObservableObject {
         installed = await Task.detached { Brew.installed() }.value
     }
 
-    func install(_ p: BrewPackage, remember profile: String?, state: AppState) async {
+    /// Also looks at the App Store and VS Code (slower, used by the profile software page).
+    func refreshEverything() async {
+        await refreshInstalled()
+        let result = await Task.detached { () -> (Set<Int>, Set<String>) in
+            let mas = Mas.isInstalled ? Set(Mas.installed().map(\.id)) : []
+            let code = Shell.which("code")
+                ? Set(Shell.run("code", ["--list-extensions"]).out.lowercased().components(separatedBy: "\n"))
+                : []
+            return (mas, code)
+        }.value
+        masInstalled = result.0
+        vscodeInstalled = result.1
+    }
+
+    func isInstalled(_ ref: PackageRef) -> Bool {
+        switch ref {
+        case .cask(let t): return installedIDs.contains("cask:\(t)")
+        case .formula(let t): return installedIDs.contains("formula:\(t)")
+        case .mas(let id, _): return masInstalled.contains(id)
+        case .vscode(let t): return vscodeInstalled.contains(t.lowercased())
+        }
+    }
+
+    // MARK: Install / uninstall (this Mac)
+
+    /// Installs here. If `profile` is given the package is also added to it.
+    func install(_ p: BrewPackage, addTo profile: String?, state: AppState) async {
         working.insert(p.id); logs[p.id] = []
         let id = p.id
         let result = await Task.detached { [weak self] in
@@ -33,10 +109,11 @@ final class BrewStore: ObservableObject {
         working.remove(p.id)
         if !result.ok { logs[id, default: []].append("✗ " + result.combined) }
         await refreshInstalled()
-        if result.ok, let profile { remember(p, in: profile, state: state, add: true) }
+        if result.ok, let profile { add(p.ref, comment: p.desc, to: profile, state: state) }
     }
 
-    func uninstall(_ p: BrewPackage, state: AppState) async {
+    /// Uninstalls from this Mac; `removeFrom` lists profiles that should forget it too.
+    func uninstall(_ p: BrewPackage, removeFrom: [String], state: AppState) async {
         working.insert(p.id); logs[p.id] = []
         let id = p.id
         let result = await Task.detached { [weak self] in
@@ -45,27 +122,108 @@ final class BrewStore: ObservableObject {
         working.remove(p.id)
         if !result.ok { logs[id, default: []].append("✗ " + result.combined) }
         await refreshInstalled()
-        if result.ok { for name in state.profileNames { remember(p, in: name, state: state, add: false) } }
+        if result.ok { for name in removeFrom { remove(p.ref, from: name, state: state) } }
     }
 
-    func remember(_ p: BrewPackage, in profileName: String, state: AppState, add: Bool) {
-        guard var profile = state.profiles[profileName] else { return }
-        switch p.kind {
-        case .cask:
-            profile.packages.casks.removeAll { $0.name == p.token }
-            if add { profile.packages.casks.append(PackageEntry(name: p.token, comment: p.desc.isEmpty ? nil : p.desc)) }
-        case .formula:
-            profile.packages.brews.removeAll { $0.name == p.token }
-            if add { profile.packages.brews.append(PackageEntry(name: p.token, comment: p.desc.isEmpty ? nil : p.desc)) }
+    // MARK: Profiles
+
+    /// Profiles that list the package: the ones on this Mac first, then the rest.
+    func profiles(containing ref: PackageRef, state: AppState) -> [String] {
+        let order = state.viewLayers + state.profileNames.filter { !state.viewLayers.contains($0) }
+        return order.filter { name in
+            state.profiles[name].map { ref.contains(in: $0.packages) } ?? false
         }
-        state.profiles[profileName] = profile
-        state.persist(profileName)
     }
 
-    func profileContaining(_ p: BrewPackage, state: AppState) -> [String] {
-        state.profileNames.filter { name in
-            guard let pk = state.profiles[name]?.packages else { return false }
-            return (p.kind == .cask ? pk.casks : pk.brews).contains { $0.name == p.token }
+    func add(_ ref: PackageRef, comment: String? = nil, to name: String, state: AppState) {
+        guard var profile = state.profiles[name] else { return }
+        ref.add(to: &profile.packages, comment: (comment?.isEmpty ?? true) ? nil : comment)
+        state.profiles[name] = profile
+        state.persist(name)
+    }
+
+    func remove(_ ref: PackageRef, from name: String, state: AppState) {
+        guard var profile = state.profiles[name] else { return }
+        ref.remove(from: &profile.packages)
+        state.profiles[name] = profile
+        state.persist(name)
+    }
+}
+
+// MARK: - Profile pills for a package
+
+/// Which profiles want this package. Click a pill to remove it from that profile, + to add it to another.
+struct PackagePills: View {
+    @EnvironmentObject var state: AppState
+    @EnvironmentObject var store: BrewStore
+    let ref: PackageRef
+    var comment: String?
+    var editable = true
+
+    var body: some View {
+        let have = store.profiles(containing: ref, state: state)
+        let missing = state.profileNames.filter { !have.contains($0) }
+        HStack(spacing: 5) {
+            ForEach(have, id: \.self) { name in
+                if editable {
+                    PackagePill(ref: ref, profile: name)
+                } else {
+                    ProfileChip(name: name, dimmed: !state.layers.contains(name))
+                }
+            }
+            if editable, !missing.isEmpty {
+                Menu {
+                    ForEach(missing, id: \.self) { name in
+                        Button {
+                            store.add(ref, comment: comment, to: name, state: state)
+                        } label: {
+                            Label(state.layers.contains(name) ? name.capitalized : "\(name.capitalized) (not on this Mac)",
+                                  systemImage: state.icon(of: name) ?? "square.stack.3d.up")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Color.secondary.opacity(0.15), in: .capsule)
+                        .overlay(Capsule().strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
+                        .foregroundStyle(.secondary)
+                }
+                .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+                .help(have.isEmpty ? "Not in any profile – add it to one" : "Add to another profile")
+            }
+        }
+    }
+}
+
+struct PackagePill: View {
+    @EnvironmentObject var state: AppState
+    @EnvironmentObject var store: BrewStore
+    let ref: PackageRef
+    let profile: String
+    @State private var asking = false
+
+    var body: some View {
+        Button { asking = true } label: {
+            ProfileChip(name: profile, dimmed: !state.layers.contains(profile))
+        }
+        .buttonStyle(.plain)
+        .help("In the \(profile.capitalized) profile – click to remove")
+        .popover(isPresented: $asking, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Remove “\(ref.title)” from \(profile.capitalized)?").font(.headline)
+                Text(state.layers.contains(profile)
+                     ? "It stays installed on this Mac. Macs using \(profile.capitalized) will no longer get it from Apply."
+                     : "\(profile.capitalized) is not on this Mac, so nothing changes here.")
+                    .font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Spacer()
+                    Button("Cancel") { asking = false }
+                    Button("Remove") { store.remove(ref, from: profile, state: state); asking = false }
+                        .buttonStyle(.glassProminent)
+                }
+            }
+            .padding(16).frame(width: 320)
         }
     }
 }
@@ -123,6 +281,8 @@ struct BrewDiscoverView: View {
 }
 
 struct PackageRow: View {
+    @EnvironmentObject var store: BrewStore
+    @EnvironmentObject var state: AppState
     let package: BrewPackage
     let installed: Bool
 
@@ -133,17 +293,22 @@ struct PackageRow: View {
                 .frame(width: 34, height: 34)
                 .glassEffect(.regular, in: .rect(cornerRadius: 9))
             VStack(alignment: .leading, spacing: 1) {
-                Text(package.name).font(.headline)
+                HStack(spacing: 6) {
+                    Text(package.name).font(.headline)
+                    PackagePills(ref: package.ref, comment: package.desc, editable: false)
+                }
                 Text(package.desc).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
-            if installed { Label("Installed", systemImage: "checkmark.circle.fill").labelStyle(.titleAndIcon).font(.caption).foregroundStyle(.green) }
+            if installed {
+                Label("Installed", systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.green)
+            }
         }
         .padding(.vertical, 2)
     }
 }
 
-// MARK: - Installed
+// MARK: - Installed on this Mac
 
 struct BrewInstalledView: View {
     @EnvironmentObject var store: BrewStore
@@ -157,23 +322,20 @@ struct BrewInstalledView: View {
     }
 
     var body: some View {
+        let loose = filtered.filter { store.profiles(containing: $0.ref, state: state).isEmpty }
+        let kept = filtered.filter { !store.profiles(containing: $0.ref, state: state).isEmpty }
         List {
-            ForEach([BrewPackage.Kind.cask, .formula], id: \.self) { kind in
-                let rows = filtered.filter { $0.kind == kind }
-                if !rows.isEmpty {
-                    Section(kind == .cask ? "Apps" : "Command line tools") {
-                        ForEach(rows) { p in
-                            NavigationLink(value: p) {
-                                HStack {
-                                    PackageRow(package: p, installed: false)
-                                    if store.profileContaining(p, state: state).isEmpty {
-                                        Text("not in profile").font(.caption2).foregroundStyle(.orange)
-                                    }
-                                }
-                            }
-                        }
-                    }
+            if !loose.isEmpty {
+                Section {
+                    ForEach(loose) { row($0) }
+                } header: {
+                    Text("Only on this Mac")
+                } footer: {
+                    Text("Not in any profile, so your other Macs will not get these. Use + to add one to a profile.")
                 }
+            }
+            if !kept.isEmpty {
+                Section("In your profiles") { ForEach(kept) { row($0) } }
             }
         }
         .overlay { if store.installed.isEmpty { ContentUnavailableView("Nothing installed yet", systemImage: "mug") } }
@@ -185,6 +347,23 @@ struct BrewInstalledView: View {
         }
         .task { await store.refreshInstalled() }
     }
+
+    private func row(_ p: BrewPackage) -> some View {
+        HStack {
+            NavigationLink(value: p) {
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 6) {
+                        Image(systemName: p.kind == .cask ? "app.fill" : "terminal.fill")
+                            .foregroundStyle(p.kind == .cask ? Color.accentColor : Color.secondary)
+                        Text(p.name).font(.headline)
+                    }
+                    Text(p.desc).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            Spacer()
+            PackagePills(ref: p.ref, comment: p.desc)
+        }
+    }
 }
 
 // MARK: - Detail
@@ -193,12 +372,12 @@ struct PackageDetailView: View {
     @EnvironmentObject var store: BrewStore
     @EnvironmentObject var state: AppState
     let package: BrewPackage
-    @State private var remember = true
     @State private var confirmDelete = false
 
     private var isInstalled: Bool { store.installedIDs.contains(package.id) }
     private var isWorking: Bool { store.working.contains(package.id) }
-    private var inProfiles: [String] { store.profileContaining(package, state: state) }
+    private var inProfiles: [String] { store.profiles(containing: package.ref, state: state) }
+    private var activeHave: [String] { inProfiles.filter { state.layers.contains($0) } }
 
     var body: some View {
         ScrollView {
@@ -214,30 +393,30 @@ struct PackageDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    actionButton
+                    actions
                 }
                 Text(package.desc.isEmpty ? "No description." : package.desc).font(.title3)
 
                 GroupBox {
                     VStack(spacing: 10) {
-                        info("Token", package.token)
-                        if !package.version.isEmpty { info("Version", package.version) }
+                        LabeledContent("On this Mac") {
+                            Label(isInstalled ? "Installed" : "Not installed",
+                                  systemImage: isInstalled ? "checkmark.circle.fill" : "circle.dashed")
+                                .foregroundStyle(isInstalled ? Color.green : Color.secondary)
+                        }
+                        LabeledContent("In profiles") { PackagePills(ref: package.ref, comment: package.desc) }
+                        LabeledContent("Token") { Text(package.token).textSelection(.enabled) }
+                        if !package.version.isEmpty { LabeledContent("Version") { Text(package.version) } }
                         if let url = URL(string: package.homepage), !package.homepage.isEmpty {
                             LabeledContent("Website") { Link(package.homepage, destination: url) }
                         }
-                        info("Status", isInstalled ? "Installed" : "Not installed")
-                        info("In profiles", inProfiles.isEmpty ? "–" : inProfiles.map(\.capitalized).joined(separator: ", "))
                     }
                     .padding(4)
                 }
 
-                if !isInstalled {
-                    Toggle("Also add to the “\(state.device.editingProfile.capitalized)” Brewfile", isOn: $remember)
-                } else if inProfiles.isEmpty {
-                    Button("Add to the “\(state.device.editingProfile.capitalized)” Brewfile") {
-                        store.remember(package, in: state.device.editingProfile, state: state, add: true)
-                    }
-                    .buttonStyle(.glass)
+                if !isInstalled, !state.editingIsActive {
+                    Text("You are editing \(state.device.editingProfile.capitalized), which is not on this Mac. “Get” installs here only; use the + pill to add it to a profile.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
 
                 if let lines = store.logs[package.id], !lines.isEmpty {
@@ -254,90 +433,88 @@ struct PackageDetailView: View {
             .padding(24)
         }
         .navigationTitle(package.name)
-        .confirmationDialog("Uninstall \(package.name)?", isPresented: $confirmDelete) {
-            Button("Uninstall", role: .destructive) { Task { await store.uninstall(package, state: state) } }
+        .task { await store.refreshInstalled() }
+        .confirmationDialog("Uninstall \(package.name) from this Mac?", isPresented: $confirmDelete) {
+            if activeHave.isEmpty {
+                Button("Uninstall", role: .destructive) {
+                    Task { await store.uninstall(package, removeFrom: [], state: state) }
+                }
+            } else {
+                Button("Uninstall and remove from \(activeHave.map(\.capitalized).joined(separator: ", "))", role: .destructive) {
+                    Task { await store.uninstall(package, removeFrom: activeHave, state: state) }
+                }
+                Button("Uninstall, keep in profiles", role: .destructive) {
+                    Task { await store.uninstall(package, removeFrom: [], state: state) }
+                }
+            }
         } message: {
-            Text("It will also be removed from all profiles’ Brewfiles.")
+            Text(activeHave.isEmpty
+                 ? "It is not in any profile on this Mac."
+                 : "If it stays in a profile, the next Apply installs it again.")
         }
     }
 
     @ViewBuilder
-    private var actionButton: some View {
+    private var actions: some View {
         if isWorking {
             ProgressView().controlSize(.large)
         } else if isInstalled {
             Button("Uninstall", role: .destructive) { confirmDelete = true }.buttonStyle(.glass).controlSize(.large)
         } else {
-            Button("Get") {
-                Task { await store.install(package, remember: remember ? state.device.editingProfile : nil, state: state) }
+            HStack {
+                if !state.editingIsActive, !inProfiles.contains(state.device.editingProfile) {
+                    Button("Add to \(state.device.editingProfile.capitalized)") {
+                        store.add(package.ref, comment: package.desc, to: state.device.editingProfile, state: state)
+                    }
+                    .buttonStyle(.glass).controlSize(.large)
+                }
+                Button("Get") {
+                    Task {
+                        await store.install(package, addTo: state.editingIsActive ? state.device.editingProfile : nil, state: state)
+                    }
+                }
+                .buttonStyle(.glassProminent).controlSize(.large)
             }
-            .buttonStyle(.glassProminent).controlSize(.large)
         }
-    }
-
-    private func info(_ k: String, _ v: String) -> some View {
-        LabeledContent(k) { Text(v).textSelection(.enabled) }
     }
 }
 
+// MARK: - Software in profiles
 
-// MARK: - Brewfile
+struct PlanItem: Identifiable {
+    let ref: PackageRef
+    let comment: String?
+    var id: PackageRef { ref }
+}
 
+/// What each profile wants, and how this Mac compares. Replaces comparing Brewfiles by hand.
 struct BrewfileView: View {
     @EnvironmentObject var store: BrewStore
     @EnvironmentObject var state: AppState
     @State private var newExtension = ""
 
     var body: some View {
-        let name = state.device.editingProfile
+        let layers = state.viewLayers
+        let others = state.profileNames.filter { !layers.contains($0) }
         List {
-            ForEach(state.profileNames, id: \.self) { profileName in
-                if let pk = state.profiles[profileName]?.packages, !pk.isEmpty {
-                    Section(profileName.capitalized) {
-                        ForEach(pk.casks) { e in row(e, "app.fill", profileName) { $0.packages.casks.removeAll { $0.name == e.name } } }
-                        ForEach(pk.brews) { e in row(e, "terminal.fill", profileName) { $0.packages.brews.removeAll { $0.name == e.name } } }
-                        ForEach(pk.mas) { m in
-                            HStack {
-                                Image(systemName: "app.badge").frame(width: 24)
-                                Text(m.name)
-                                Spacer()
-                                Text("App Store").font(.caption).foregroundStyle(.secondary)
-                                removeButton(profileName) { $0.packages.mas.removeAll { $0.id == m.id } }
-                            }
-                        }
-                        ForEach(pk.vscode) { e in row(e, "chevron.left.forwardslash.chevron.right", profileName) { $0.packages.vscode.removeAll { $0.name == e.name } } }
-                    }
-                }
+            ForEach(layers + others, id: \.self) { name in
+                section(name, onThisMac: state.layers.contains(name))
             }
-            Section("VS Code extension") {
+            Section("Add VS Code extension to \(state.device.editingProfile.capitalized)") {
                 HStack {
                     TextField("publisher.extension-id", text: $newExtension)
-                    Button("Add to \(name.capitalized)") {
-                        var p = state.editing
-                        p.packages.vscode.append(PackageEntry(name: newExtension.trimmingCharacters(in: .whitespaces)))
-                        state.editing = p
+                    Button("Add") {
+                        store.add(.vscode(newExtension.trimmingCharacters(in: .whitespaces)), to: state.device.editingProfile, state: state)
                         newExtension = ""
                     }
                     .disabled(newExtension.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
-            let untracked = store.installed.filter { store.profileContaining($0, state: state).isEmpty }
-            if !untracked.isEmpty {
-                Section {
-                    ForEach(untracked) { p in
-                        HStack {
-                            Text(p.name)
-                            Spacer()
-                            Button("Add to \(name.capitalized)") { store.remember(p, in: name, state: state, add: true) }.buttonStyle(.glass)
-                        }
-                    }
-                } header: { Text("Installed, but not in any profile") }
-                footer: { Text("These are on this Mac only. Add them to a profile to get them on your other Macs too.") }
-            }
         }
-        .navigationTitle("Brewfile")
-        .task { await store.refreshInstalled() }
+        .navigationTitle("Profile Software")
+        .task { await store.refreshEverything() }
         .toolbar {
+            Button { Task { await store.refreshEverything() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
             Button {
                 let panel = NSSavePanel()
                 panel.nameFieldStringValue = "Brewfile"
@@ -348,27 +525,66 @@ struct BrewfileView: View {
         }
     }
 
-    private func row(_ e: PackageEntry, _ icon: String, _ profileName: String, remove: @escaping (inout Profile) -> Void) -> some View {
-        HStack {
-            Image(systemName: icon).frame(width: 24)
-            VStack(alignment: .leading) {
-                Text(e.name)
-                if let c = e.comment { Text(c).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+    @ViewBuilder
+    private func section(_ name: String, onThisMac: Bool) -> some View {
+        if let pk = state.profiles[name]?.packages, !pk.isEmpty {
+            let items: [PlanItem] =
+                pk.casks.map { PlanItem(ref: .cask($0.name), comment: $0.comment) }
+                + pk.brews.map { PlanItem(ref: .formula($0.name), comment: $0.comment) }
+                + pk.mas.map { PlanItem(ref: .mas($0.id, $0.name), comment: nil) }
+                + pk.vscode.map { PlanItem(ref: .vscode($0.name), comment: $0.comment) }
+            Section {
+                ForEach(items) { item in
+                    row(item.ref, comment: item.comment, profile: name, onThisMac: onThisMac)
+                }
+            } header: {
+                HStack(spacing: 6) {
+                    ProfileChip(name: name)
+                    if state.icon(of: name) != nil { Text(name.capitalized) }
+                    if !onThisMac { Text("not on this Mac").font(.caption).foregroundStyle(.secondary) }
+                }
             }
-            Spacer()
-            removeButton(profileName, remove)
         }
     }
 
-    private func removeButton(_ profileName: String, _ remove: @escaping (inout Profile) -> Void) -> some View {
-        Button(role: .destructive) {
-            guard var p = state.profiles[profileName] else { return }
-            remove(&p)
-            state.profiles[profileName] = p
-            state.persist(profileName)
-        } label: { Image(systemName: "minus.circle") }
-        .buttonStyle(.borderless)
-        .help("Remove from Brewfile (does not uninstall)")
+    private func row(_ ref: PackageRef, comment: String?, profile: String, onThisMac: Bool) -> some View {
+        let installed = store.isInstalled(ref)
+        return HStack(spacing: 10) {
+            Image(systemName: symbol(ref)).frame(width: 22).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(ref.title)
+                if let comment { Text(comment).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+            }
+            Spacer()
+            if onThisMac {
+                if installed {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).help("Installed on this Mac")
+                } else if let pkg = brewPackage(ref) {
+                    Button("Install") { Task { await store.install(pkg, addTo: nil, state: state) } }
+                        .buttonStyle(.glass).controlSize(.small)
+                } else {
+                    Label("Missing", systemImage: "exclamationmark.circle").font(.caption).foregroundStyle(.orange)
+                }
+            }
+            PackagePills(ref: ref, comment: comment)
+        }
+    }
+
+    private func brewPackage(_ ref: PackageRef) -> BrewPackage? {
+        switch ref {
+        case .cask(let t): return BrewPackage(kind: .cask, token: t)
+        case .formula(let t): return BrewPackage(kind: .formula, token: t)
+        default: return nil
+        }
+    }
+
+    private func symbol(_ ref: PackageRef) -> String {
+        switch ref {
+        case .cask: return "app.fill"
+        case .formula: return "terminal.fill"
+        case .mas: return "app.badge"
+        case .vscode: return "chevron.left.forwardslash.chevron.right"
+        }
     }
 }
 
@@ -376,10 +592,10 @@ struct BrewfileView: View {
 
 struct AppStoreView: View {
     @EnvironmentObject var state: AppState
+    @EnvironmentObject var store: BrewStore
     @State private var installed: [MasEntry] = []
     @State private var results: [MasEntry] = []
     @State private var query = ""
-    @State private var log: [String] = []
 
     var body: some View {
         List {
@@ -392,7 +608,7 @@ struct AppStoreView: View {
                         HStack {
                             Text(m.name)
                             Spacer()
-                            Button("Add to \(state.device.editingProfile.capitalized)") { add(m) }.buttonStyle(.glass)
+                            PackagePills(ref: .mas(m.id, m.name))
                             Button("Get") {
                                 Task.detached { _ = Mas.install(m.id) { _ in } }
                             }.buttonStyle(.glassProminent)
@@ -405,11 +621,7 @@ struct AppStoreView: View {
                     HStack {
                         Text(m.name)
                         Spacer()
-                        if state.effective.packages.mas.contains(where: { $0.id == m.id }) {
-                            Label("In profile", systemImage: "checkmark").font(.caption).foregroundStyle(.green)
-                        } else {
-                            Button("Add to \(state.device.editingProfile.capitalized)") { add(m) }.buttonStyle(.glass)
-                        }
+                        PackagePills(ref: .mas(m.id, m.name))
                     }
                 }
             }
@@ -421,11 +633,5 @@ struct AppStoreView: View {
             Task { results = await Task.detached { Mas.search(q) }.value }
         }
         .task { installed = await Task.detached { Mas.installed() }.value }
-    }
-
-    private func add(_ m: MasEntry) {
-        var p = state.editing
-        if !p.packages.mas.contains(where: { $0.id == m.id }) { p.packages.mas.append(m) }
-        state.editing = p
     }
 }
