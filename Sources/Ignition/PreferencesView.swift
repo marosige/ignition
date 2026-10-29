@@ -2,28 +2,62 @@ import SwiftUI
 import AppKit
 import IgnitionCore
 
-/// Looks like a System Settings pane: grouped form, one section per topic.
+/// A catalogue of what a profile can set: planned settings carry their control, the rest
+/// are one tap away ("Add"), like getting an app into a profile.
 struct PreferencesView: View {
     @EnvironmentObject var state: AppState
     let category: PrefCategory
+    @State private var filter: Filter = .all
+
+    enum Filter: String, CaseIterable, Identifiable {
+        case all = "All", planned = "In plan", open = "Not in plan"
+        var id: String { rawValue }
+    }
+
+    private var defs: [PreferenceDef] { PreferenceCatalog.defs(in: category) }
+    private var plannedCount: Int { defs.filter { state.plannedValue(for: $0) != nil }.count }
+
+    private func visible(_ def: PreferenceDef) -> Bool {
+        let planned = state.plannedValue(for: def) != nil
+        switch filter {
+        case .all: return true
+        case .planned: return planned
+        case .open: return !planned
+        }
+    }
 
     var body: some View {
         Form {
+            Section {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(plannedCount) of \(defs.count) in the plan").font(.headline)
+                        Text("Settings you add are saved into \(state.device.editingProfile.capitalized) and applied to every Mac that uses it.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Picker("", selection: $filter) {
+                        ForEach(Filter.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented).labelsHidden().frame(width: 260)
+                }
+            }
             ForEach(PreferenceCatalog.sections(in: category)) { section in
-                Section(section.name) {
-                    ForEach(section.defs) { def in PreferenceRow(def: def) }
+                let rows = section.defs.filter(visible)
+                if !rows.isEmpty {
+                    Section(section.name) {
+                        ForEach(rows) { def in PreferenceRow(def: def) }
+                    }
                 }
             }
             ForEach(ManualSettings.items(in: category)) { item in
                 ManualSettingSection(item: item)
             }
             Section {
-                Button("Reset all in \(category.title) to macOS defaults", role: .destructive) {
-                    for def in PreferenceCatalog.defs(in: category) where state.isManaged(def) { state.reset(def) }
+                Button("Remove all \(category.title) settings from \(state.device.editingProfile.capitalized)", role: .destructive) {
+                    for def in defs where state.isManagedByEditing(def) { state.reset(def) }
                 }
-                .disabled(!PreferenceCatalog.defs(in: category).contains { state.isManaged($0) })
-            } footer: {
-                Text("Rows with a profile pill are part of your profile and get applied on every Mac that uses it. Click the Apple pill to reset one to the default of this macOS version.")
+                .disabled(!defs.contains { state.isManagedByEditing($0) })
             }
         }
         .formStyle(.grouped)
@@ -37,68 +71,67 @@ struct PreferenceRow: View {
     let def: PreferenceDef
 
     var body: some View {
+        let planned = state.plannedValue(for: def) != nil
         let origins = state.origins(for: def)
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: 10) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(planned ? state.color(of: state.device.editingProfile) : Color.clear)
+                .frame(width: 3, height: 30)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(def.title).layoutPriority(1)
+                        .foregroundStyle(planned ? Color.primary : Color.secondary)
                     if def.scope == .system {
                         Image(systemName: "lock").font(.caption).foregroundStyle(.secondary)
                             .help("Needs administrator rights")
                     }
-                    DefaultPill(def: def, origins: origins)
-                    OriginPills(def: def, origins: origins)
-                    LivePill(def: def)
-                    notInProfile(origins)
+                    if planned {
+                        DefaultPill(def: def, origins: origins)
+                        OriginPills(def: def, origins: origins)
+                        LivePill(def: def)
+                    }
                 }
                 if let detail = def.detail {
                     Text(detail).font(.caption).foregroundStyle(.secondary)
                 }
+                if !planned { unplannedHint }
             }
             Spacer(minLength: 12)
-            control
+            if planned { control } else { addButton }
         }
     }
 
-    /// Value differs from the default but no profile has it: a "+" pill to add it.
+    /// What the Mac would get from the default, and what it has now.
     @ViewBuilder
-    private func notInProfile(_ origins: [PrefOrigin]) -> some View {
-        if origins.isEmpty, def.osDefault != nil, state.liveValue(def) != def.osDefault {
-            addToProfile
-        }
-    }
-
-    /// One "+" pill for a single active profile, a menu of profiles when there are several.
-    @ViewBuilder
-    private var addToProfile: some View {
-        let names = state.layers
-        if names.count == 1, let only = names.first {
-            Button { state.adopt(def, into: only) } label: { plusPill }
-                .buttonStyle(.plain)
-                .help("This Mac differs from the default, but no profile says so – add the current value to \(only.capitalized)")
-        } else if names.count > 1 {
-            Menu {
-                ForEach(names, id: \.self) { name in
-                    Button { state.adopt(def, into: name) } label: {
-                        Label(name.capitalized, systemImage: state.icon(of: name) ?? "square.stack.3d.up")
-                    }
+    private var unplannedHint: some View {
+        HStack(spacing: 8) {
+            if def.osDefault != nil {
+                HStack(spacing: 3) {
+                    Image(systemName: "apple.logo")
+                    Text(state.defaultText(def))
                 }
-            } label: { plusPill }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .help("This Mac differs from the default, but no profile says so – add the current value to a profile")
+            }
+            if state.editingIsActive, let live = state.live[def.id], live != def.osDefault {
+                HStack(spacing: 3) {
+                    Image(systemName: "laptopcomputer")
+                    Text(state.formatted(def, live))
+                }
+                .foregroundStyle(.orange)
+                .help("This Mac currently has this value")
+            }
         }
+        .font(.caption2.weight(.medium))
+        .foregroundStyle(.secondary)
     }
 
-    private var plusPill: some View {
-        Image(systemName: "plus")
-            .font(.system(size: 9, weight: .bold))
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Color.orange.opacity(0.2), in: .capsule)
-            .overlay(Capsule().strokeBorder(Color.orange.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
-            .foregroundStyle(.orange)
+    private var addButton: some View {
+        let start = state.initialValue(def)
+        return Button { state.set(def, to: start) } label: {
+            Label("Add", systemImage: "plus")
+        }
+        .buttonStyle(.glass)
+        .controlSize(.small)
+        .help("Add to \(state.device.editingProfile.capitalized), starting with \(state.formatted(def, start))")
     }
 
     @ViewBuilder

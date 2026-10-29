@@ -248,6 +248,19 @@ final class AppState: ObservableObject {
         plannedValue(for: def) ?? def.osDefault ?? live[def.id]
     }
 
+    /// The value a setting starts with when you add it to a profile: what this Mac has
+    /// (when the profile is on this Mac), else the macOS default.
+    func initialValue(_ def: PreferenceDef) -> PrefValue {
+        if editingIsActive, let v = live[def.id] { return v }
+        if let v = def.osDefault { return v }
+        switch def.control {
+        case .toggle: return .bool(false)
+        case .picker(let options): return options.first?.value ?? .int(0)
+        case .slider(let range, _, _): return .int(Int(range.lowerBound))
+        case .text: return .string("")
+        }
+    }
+
     /// What this Mac has right now.
     func liveValue(_ def: PreferenceDef) -> PrefValue? { live[def.id] ?? def.osDefault }
 
