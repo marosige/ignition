@@ -234,13 +234,21 @@ struct StatusCard: View {
 
 // MARK: - Diff
 
+/// What changed, in plain terms: settings, packages, Dock... with undo for your own changes.
 struct DiffSheet: View {
     @EnvironmentObject var state: AppState
     @Environment(\.dismiss) private var dismiss
     enum Side: String, CaseIterable, Identifiable { case mine = "My changes", theirs = "On GitHub"; var id: String { rawValue } }
     @State private var side: Side = .mine
-    @State private var diffs: [FileDiff] = []
+    @State private var changes: [PlanChange] = []
+    @State private var raw: [FileDiff] = []
+    @State private var technical = false
     @State private var loading = false
+
+    private var profileNames: [String] {
+        var seen = Set<String>()
+        return changes.map(\.profile).filter { seen.insert($0).inserted }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -249,27 +257,31 @@ struct DiffSheet: View {
                 Picker("", selection: $side) { ForEach(Side.allCases) { Text($0.rawValue).tag($0) } }
                     .pickerStyle(.segmented).labelsHidden().frame(width: 260)
                 Spacer()
+                Toggle("Technical", isOn: $technical).toggleStyle(.button).buttonStyle(.glass)
                 Button("Done") { dismiss() }.buttonStyle(.glass)
             }
             .padding()
             Divider()
             if loading {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if diffs.isEmpty {
+            } else if technical {
+                technicalView
+            } else if changes.isEmpty {
                 ContentUnavailableView(side == .mine ? "Nothing changed on this Mac" : "Nothing new on GitHub",
                                        systemImage: "checkmark.circle")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 18) {
-                        ForEach(diffs) { file in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(file.path).font(.subheadline.bold())
-                                DiffText(text: file.text)
+                List {
+                    ForEach(profileNames, id: \.self) { name in
+                        Section {
+                            ForEach(changes.filter { $0.profile == name }) { row($0) }
+                        } header: {
+                            HStack(spacing: 6) {
+                                ProfileChip(name: name)
+                                if state.icon(of: name) != nil { Text(name.capitalized) }
                             }
                         }
                     }
-                    .padding()
                 }
             }
         }
@@ -277,11 +289,62 @@ struct DiffSheet: View {
         .task(id: side) { await load() }
     }
 
+    private func row(_ change: PlanChange) -> some View {
+        let color: Color = change.kind == .added ? .green : (change.kind == .removed ? .red : .orange)
+        let mark = change.kind == .added ? "plus.circle.fill" : (change.kind == .removed ? "minus.circle.fill" : "pencil.circle.fill")
+        let canOpen = side == .mine && change.prefID != nil
+        return HStack(spacing: 10) {
+            Image(systemName: mark).foregroundStyle(color)
+            Image(systemName: change.symbol).foregroundStyle(.secondary).frame(width: 20)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(change.title)
+                if let detail = change.detail { Text(detail).font(.caption).foregroundStyle(.secondary) }
+            }
+            Spacer()
+            if side == .mine, change.undo != nil {
+                Button {
+                    state.undo(change)
+                    Task { await load() }
+                } label: { Label("Undo", systemImage: "arrow.uturn.backward") }
+                .buttonStyle(.glass).controlSize(.small)
+                .help("Put it back the way it was on GitHub")
+            }
+            if canOpen { Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary) }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard canOpen, let id = change.prefID else { return }
+            dismiss()
+            state.reveal(id)
+        }
+    }
+
+    private var technicalView: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 18) {
+                ForEach(raw) { file in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(file.path).font(.subheadline.bold())
+                        DiffText(text: file.text)
+                    }
+                }
+            }
+            .padding()
+        }
+    }
+
     private func load() async {
         guard let sync = state.sync else { return }
         loading = true
         let side = self.side
-        diffs = await Task.detached { side == .mine ? sync.localDiff() : sync.incomingDiff() }.value
+        let folder = AppPaths.normalizeFolder(state.device.configFolder)
+        let result = await Task.detached { () -> ([ProfileDelta], [FileDiff]) in
+            let deltas = AppState.loadDeltas(sync: sync, side: side == .mine ? .mine : .theirs, folder: folder)
+            let raw = side == .mine ? sync.localDiff() : sync.incomingDiff()
+            return (deltas, raw)
+        }.value
+        changes = result.0.flatMap { state.planChanges($0) }
+        raw = result.1
         loading = false
     }
 }
