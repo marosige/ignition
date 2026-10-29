@@ -26,17 +26,16 @@ enum Destination: Hashable {
     case overview, profiles, sync, apply
     case pref(PrefCategory)
     case dock, loginApps, finderSidebar, directories, dotfiles
-    case brewDiscover, brewInstalled, appStore, brewfile
+    case brewDiscover, brewInstalled, brewfile
 }
 
 struct ContentView: View {
     @EnvironmentObject var state: AppState
     @EnvironmentObject var store: BrewStore
-    @State private var homebrewExpanded = true
 
     var body: some View {
         NavigationSplitView {
-            SidebarView(selection: Binding(get: { state.destination }, set: { state.navigate(to: $0) }), homebrewExpanded: $homebrewExpanded)
+            SidebarView(selection: Binding(get: { state.destination }, set: { state.navigate(to: $0) }))
                 .navigationSplitViewColumnWidth(min: 230, ideal: 250, max: 300)
         } detail: {
             // Package pages replace the section instead of being pushed, so only the
@@ -111,8 +110,7 @@ struct DetailRouter: View {
         case .directories: DirectoriesView()
         case .dotfiles: DotfilesView()
         case .brewDiscover: BrewDiscoverView()
-        case .brewInstalled: BrewInstalledView()
-        case .appStore: AppStoreView()
+        case .brewInstalled: InstalledView()
         case .brewfile: BrewfileView()
         }
     }
@@ -124,7 +122,6 @@ struct SidebarView: View {
     @EnvironmentObject var state: AppState
     @EnvironmentObject var store: BrewStore
     @Binding var selection: Destination?
-    @Binding var homebrewExpanded: Bool
 
     var body: some View {
         List(selection: $selection) {
@@ -160,15 +157,10 @@ struct SidebarView: View {
             }
             Section("Software") {
                 Label("Profile Software", systemImage: "list.bullet.rectangle").tag(Destination.brewfile)
-                DisclosureGroup(isExpanded: $homebrewExpanded) {
-                    Label("Discover", systemImage: "sparkle.magnifyingglass").tag(Destination.brewDiscover)
-                    Label("Installed", systemImage: "checkmark.circle")
-                        .badge(store.installed.filter { !$0.ref.isIgnitionTool && store.profiles(containing: $0.ref, state: state).isEmpty }.count)
-                        .tag(Destination.brewInstalled)
-                } label: {
-                    Label("Homebrew", systemImage: "mug")
-                }
-                Label("App Store", systemImage: "app.badge").tag(Destination.appStore)
+                Label("Installed", systemImage: "checkmark.circle")
+                    .badge(state.unplannedCount(store: store))
+                    .tag(Destination.brewInstalled)
+                Label("Install Software", systemImage: "arrow.down.app").tag(Destination.brewDiscover)
             }
         }
         .listStyle(.sidebar)

@@ -293,6 +293,13 @@ final class AppState: ObservableObject {
         device.lastApplied == nil || device.lastAppliedPlan != planFingerprint || !pending.isEmpty
     }
 
+    /// Installed things that no profile lists (shown as the badge on Installed).
+    func unplannedCount(store: BrewStore) -> Int {
+        let brew = store.installed.filter { !$0.ref.isIgnitionTool && store.profiles(containing: $0.ref, state: self).isEmpty }.count
+        let mas = store.masEntries.filter { store.profiles(containing: .mas($0.id, $0.name), state: self).isEmpty }.count
+        return brew + mas
+    }
+
     func markApplied() {
         device.lastApplied = Date()
         device.lastAppliedPlan = planFingerprint

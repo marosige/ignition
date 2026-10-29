@@ -65,6 +65,7 @@ final class BrewStore: ObservableObject {
     @Published var catalog: [BrewPackage] = []
     @Published var installed: [BrewPackage] = []
     @Published var masInstalled: Set<Int> = []
+    @Published var masEntries: [MasEntry] = []
     @Published var vscodeInstalled: Set<String> = []
     @Published var loading = false
     @Published var loadError: String?
@@ -88,14 +89,15 @@ final class BrewStore: ObservableObject {
     /// Also looks at the App Store and VS Code (slower, used by the profile software page).
     func refreshEverything() async {
         await refreshInstalled()
-        let result = await Task.detached { () -> (Set<Int>, Set<String>) in
-            let mas = Mas.isInstalled ? Set(Mas.installed().map(\.id)) : []
+        let result = await Task.detached { () -> ([MasEntry], Set<String>) in
+            let mas = Mas.isInstalled ? Mas.installed() : []
             let code = Shell.which("code")
                 ? Set(Shell.run("code", ["--list-extensions"]).out.lowercased().components(separatedBy: "\n"))
                 : []
             return (mas, code)
         }.value
-        masInstalled = result.0
+        masEntries = result.0
+        masInstalled = Set(result.0.map(\.id))
         vscodeInstalled = result.1
     }
 
@@ -321,50 +323,84 @@ struct BrewDiscoverView: View {
     @EnvironmentObject var state: AppState
     @State private var query = ""
     @State private var kind: KindFilter = .all
+    @State private var storeResults: [MasEntry] = []
+    @State private var searchedStore = ""
 
     enum KindFilter: String, CaseIterable, Identifiable {
-        case all = "All", apps = "Apps", tools = "Command line"
+        case all = "All", apps = "Apps", tools = "Command line", appStore = "App Store"
         var id: String { rawValue }
         var kinds: Set<BrewPackage.Kind> {
-            switch self { case .all: return [.cask, .formula]; case .apps: return [.cask]; case .tools: return [.formula] }
+            switch self {
+            case .all: return [.cask, .formula]
+            case .apps: return [.cask]
+            case .tools: return [.formula]
+            case .appStore: return []
+            }
         }
     }
 
-    var results: [BrewPackage] { Brew.search(query, in: store.catalog, kinds: kind.kinds) }
+    private var results: [BrewPackage] { Brew.search(query, in: store.catalog, kinds: kind.kinds) }
+    private var showsStore: Bool { kind == .all || kind == .appStore }
 
     var body: some View {
         Group {
-            if !Brew.isInstalled {
-                ContentUnavailableView("Homebrew is not installed", systemImage: "mug",
-                                       description: Text("Open “Apply to this Mac” – Ignition installs Homebrew first."))
+            if query.isEmpty {
+                ContentUnavailableView("Search Homebrew and the App Store", systemImage: "sparkle.magnifyingglass",
+                                       description: Text("Try “firefox”, “raycast” or “ripgrep”. Press return to include the App Store."))
             } else if store.loading && store.catalog.isEmpty {
                 ProgressView("Loading the Homebrew catalog…")
-            } else if query.isEmpty {
-                ContentUnavailableView("Search Homebrew", systemImage: "sparkle.magnifyingglass",
-                                       description: Text("\(store.catalog.count) packages. Try “firefox”, “raycast” or “ripgrep”."))
-            } else if results.isEmpty {
+            } else if results.isEmpty && (!showsStore || storeResults.isEmpty) {
                 ContentUnavailableView.search(text: query)
             } else {
-                List(results) { p in
-                    Button { state.path.append(p) } label: {
-                        PackageRow(package: p, installed: store.installedIDs.contains(p.id))
-                            .contentShape(Rectangle())
+                List {
+                    ForEach(results) { p in
+                        Button { state.path.append(p) } label: {
+                            PackageRow(package: p, installed: store.installedIDs.contains(p.id))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    if showsStore, !storeResults.isEmpty, searchedStore == query {
+                        Section("Mac App Store") {
+                            ForEach(storeResults) { m in
+                                HStack(spacing: 12) {
+                                    SourceBadge(source: .appStore)
+                                    Text(m.name).font(.headline)
+                                    Spacer()
+                                    PackagePills(ref: .mas(m.id, m.name))
+                                    if store.masInstalled.contains(m.id) {
+                                        Label("Installed", systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.green)
+                                    } else {
+                                        Button("Get") { Task.detached { _ = Mas.install(m.id) { _ in } } }
+                                            .buttonStyle(.glassProminent)
+                                    }
+                                }
+                                .padding(.vertical, 2)
+                            }
+                        }
+                    }
                 }
             }
         }
-        .navigationTitle("Discover")
+        .navigationTitle("Install Software")
         .searchable(text: $query, placement: .toolbar, prompt: "Search apps and tools")
+        .onSubmit(of: .search) {
+            let q = query
+            guard showsStore, Mas.isInstalled else { return }
+            Task {
+                storeResults = await Task.detached { Mas.search(q) }.value
+                searchedStore = q
+            }
+        }
         .toolbar {
             ToolbarItem {
-                Picker("Kind", selection: $kind) { ForEach(KindFilter.allCases) { Text($0.rawValue).tag($0) } }
+                Picker("Source", selection: $kind) { ForEach(KindFilter.allCases) { Text($0.rawValue).tag($0) } }
                     .pickerStyle(.segmented)
             }
         }
         .task {
             await store.loadCatalog()
-            await store.refreshInstalled()
+            await store.refreshEverything()
         }
     }
 }
@@ -377,10 +413,7 @@ struct PackageRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: package.kind == .cask ? "app.fill" : "terminal.fill")
-                .font(.title3).foregroundStyle(package.kind == .cask ? Color.accentColor : Color.secondary)
-                .frame(width: 34, height: 34)
-                .glassEffect(.regular, in: .rect(cornerRadius: 9))
+            SourceBadge(source: package.kind == .cask ? .cask : .formula)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(package.name).font(.headline)
@@ -400,65 +433,160 @@ struct PackageRow: View {
 
 // MARK: - Installed on this Mac
 
-struct BrewInstalledView: View {
+/// How a package got here, shown as an icon.
+enum SoftwareSource {
+    case cask, formula, appStore
+
+    var symbol: String {
+        switch self {
+        case .cask: return "app.fill"
+        case .formula: return "terminal.fill"
+        case .appStore: return "bag.fill"
+        }
+    }
+    var label: String {
+        switch self {
+        case .cask: return "Homebrew app (cask)"
+        case .formula: return "Homebrew command line tool"
+        case .appStore: return "Mac App Store"
+        }
+    }
+    var tint: Color {
+        switch self {
+        case .cask: return .accentColor
+        case .formula: return .secondary
+        case .appStore: return .blue
+        }
+    }
+}
+
+struct SourceBadge: View {
+    let source: SoftwareSource
+    var size: CGFloat = 34
+
+    var body: some View {
+        Image(systemName: source.symbol)
+            .font(.system(size: size * 0.5))
+            .foregroundStyle(source.tint)
+            .frame(width: size, height: size)
+            .glassEffect(.regular, in: .rect(cornerRadius: size * 0.27))
+            .help(source.label)
+    }
+}
+
+/// One installed thing, whichever store it came from.
+struct SoftwareItem: Identifiable {
+    let ref: PackageRef
+    let name: String
+    let desc: String
+    let source: SoftwareSource
+    var package: BrewPackage?
+    var id: PackageRef { ref }
+}
+
+/// Everything installed here – Homebrew apps and tools plus App Store apps – in one list.
+struct InstalledView: View {
     @EnvironmentObject var store: BrewStore
     @EnvironmentObject var state: AppState
     @State private var query = ""
-    @State private var onlyUnplanned = false
+    @State private var planFilter: PlanFilter = .all
+    @State private var profileFilter: String?
+    @State private var sourceFilter: SourceFilter = .all
 
-    /// Stable order: rows never jump when you add a package to a profile.
-    var filtered: [BrewPackage] {
-        store.installed.filter { p in
-            (query.isEmpty || p.name.localizedCaseInsensitiveContains(query) || p.desc.localizedCaseInsensitiveContains(query))
-                && (!onlyUnplanned || (!p.ref.isIgnitionTool && store.profiles(containing: p.ref, state: state).isEmpty))
+    enum PlanFilter: String, CaseIterable, Identifiable {
+        case all = "All", planned = "In a profile", open = "Not in a profile"
+        var id: String { rawValue }
+    }
+    enum SourceFilter: String, CaseIterable, Identifiable {
+        case all = "Everything", apps = "Apps", tools = "Command line", appStore = "App Store"
+        var id: String { rawValue }
+    }
+
+    private var items: [SoftwareItem] {
+        let brew = store.installed.map {
+            SoftwareItem(ref: $0.ref, name: $0.name, desc: $0.desc, source: $0.kind == .cask ? .cask : .formula, package: $0)
+        }
+        let mas = store.masEntries.map {
+            SoftwareItem(ref: .mas($0.id, $0.name), name: $0.name, desc: "Mac App Store", source: .appStore, package: nil)
+        }
+        return (brew + mas).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    /// Stable order: rows never jump when you add something to a profile.
+    private var filtered: [SoftwareItem] {
+        items.filter { item in
+            guard query.isEmpty || item.name.localizedCaseInsensitiveContains(query) || item.desc.localizedCaseInsensitiveContains(query) else { return false }
+            switch sourceFilter {
+            case .all: break
+            case .apps: if item.source != .cask { return false }
+            case .tools: if item.source != .formula { return false }
+            case .appStore: if item.source != .appStore { return false }
+            }
+            let have = store.profiles(containing: item.ref, state: state)
+            if let profileFilter { return have.contains(profileFilter) }
+            switch planFilter {
+            case .all: return true
+            case .planned: return !have.isEmpty
+            case .open: return have.isEmpty && !item.ref.isIgnitionTool
+            }
         }
     }
 
     var body: some View {
         List {
-            ForEach([BrewPackage.Kind.cask, .formula], id: \.self) { kind in
-                let rows = filtered.filter { $0.kind == kind }
-                if !rows.isEmpty {
-                    Section(kind == .cask ? "Apps" : "Command line tools") {
-                        ForEach(rows) { row($0) }
+            Section {
+                HStack(spacing: 10) {
+                    Picker("", selection: $planFilter) {
+                        ForEach(PlanFilter.allCases) { Text($0.rawValue).tag($0) }
                     }
+                    .pickerStyle(.segmented).labelsHidden().frame(width: 300)
+                    .disabled(profileFilter != nil)
+                    Picker("Profile", selection: $profileFilter) {
+                        Text("Any profile").tag(String?.none)
+                        ForEach(state.profileNames, id: \.self) { Text($0.capitalized).tag(String?.some($0)) }
+                    }
+                    .fixedSize()
+                    Picker("Source", selection: $sourceFilter) {
+                        ForEach(SourceFilter.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    .fixedSize()
+                    Spacer()
+                    Text("\(filtered.count) of \(items.count)").font(.caption).foregroundStyle(.secondary)
                 }
+            }
+            Section {
+                ForEach(filtered) { row($0) }
             }
         }
         .overlay {
-            if store.installed.isEmpty { ContentUnavailableView("Nothing installed yet", systemImage: "mug") }
-            else if filtered.isEmpty { ContentUnavailableView("Nothing to show", systemImage: "checkmark.circle",
-                                                              description: Text(onlyUnplanned ? "Everything installed is in a profile." : "")) }
+            if items.isEmpty { ContentUnavailableView("Nothing installed yet", systemImage: "mug") }
+            else if filtered.isEmpty { ContentUnavailableView("Nothing to show", systemImage: "checkmark.circle") }
         }
         .navigationTitle("Installed")
         .searchable(text: $query, placement: .toolbar)
         .toolbar {
-            ToolbarItemGroup {
-                Toggle(isOn: $onlyUnplanned) { Label("Not in a profile", systemImage: "line.3.horizontal.decrease") }
-                    .help("Show only what is installed here but in no profile")
-                Button { Task { await store.refreshInstalled() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
-            }
+            Button { Task { await store.refreshEverything() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
         }
-        .task { await store.refreshInstalled() }
+        .task { await store.refreshEverything() }
     }
 
-    private func row(_ p: BrewPackage) -> some View {
-        HStack {
-            Button { state.path.append(p) } label: {
+    private func row(_ item: SoftwareItem) -> some View {
+        HStack(spacing: 12) {
+            SourceBadge(source: item.source)
+            Button {
+                if let package = item.package { state.path.append(package) }
+            } label: {
                 VStack(alignment: .leading, spacing: 1) {
-                    HStack(spacing: 6) {
-                        Image(systemName: p.kind == .cask ? "app.fill" : "terminal.fill")
-                            .foregroundStyle(p.kind == .cask ? Color.accentColor : Color.secondary)
-                        Text(p.name).font(.headline)
-                    }
-                    Text(p.desc).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    Text(item.name).font(.headline)
+                    Text(item.desc).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .disabled(item.package == nil)
             Spacer()
-            PackagePills(ref: p.ref, comment: p.desc)
-            UninstallButton(ref: p.ref, assumeInstalled: true)
+            PackagePills(ref: item.ref, comment: item.desc)
+            UninstallButton(ref: item.ref, assumeInstalled: true)
         }
     }
 }
@@ -758,58 +886,6 @@ struct BrewfileView: View {
         case .formula: return "terminal.fill"
         case .mas: return "app.badge"
         case .vscode: return "chevron.left.forwardslash.chevron.right"
-        }
-    }
-}
-
-// MARK: - App Store
-
-struct AppStoreView: View {
-    @EnvironmentObject var state: AppState
-    @EnvironmentObject var store: BrewStore
-    @State private var installed: [MasEntry] = []
-    @State private var results: [MasEntry] = []
-    @State private var query = ""
-
-    var body: some View {
-        List {
-            if !Mas.isInstalled {
-                Text("`mas` is not installed yet. Run “Apply to this Mac” first.").foregroundStyle(.secondary)
-            }
-            if !results.isEmpty {
-                Section("Search results") {
-                    ForEach(results) { m in
-                        HStack {
-                            Text(m.name)
-                            Spacer()
-                            PackagePills(ref: .mas(m.id, m.name))
-                            Button("Get") {
-                                Task.detached { _ = Mas.install(m.id) { _ in } }
-                            }.buttonStyle(.glassProminent)
-                        }
-                    }
-                }
-            }
-            Section("Installed from the App Store") {
-                ForEach(installed) { m in
-                    HStack {
-                        Text(m.name)
-                        Spacer()
-                        PackagePills(ref: .mas(m.id, m.name))
-                        UninstallButton(ref: .mas(m.id, m.name), assumeInstalled: true)
-                    }
-                }
-            }
-        }
-        .navigationTitle("App Store")
-        .searchable(text: $query, placement: .toolbar, prompt: "Search the Mac App Store")
-        .onSubmit(of: .search) {
-            let q = query
-            Task { results = await Task.detached { Mas.search(q) }.value }
-        }
-        .task {
-            installed = await Task.detached { Mas.installed() }.value
-            await store.refreshEverything()
         }
     }
 }
