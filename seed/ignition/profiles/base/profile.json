@@ -156,14 +156,6 @@
     "taps": [],
     "brews": [
       {
-        "name": "mas",
-        "comment": "Mac App Store command-line interface"
-      },
-      {
-        "name": "dockutil",
-        "comment": "Tool for managing dock items"
-      },
-      {
         "name": "gum",
         "comment": "Tool for glamorous shell scripts"
       },
@@ -225,10 +217,6 @@
       }
     ],
     "casks": [
-      {
-        "name": "mysides",
-        "comment": "A simple CLI tool for Finder sidebar modification."
-      },
       {
         "name": "fork",
         "comment": "GIT client"

@@ -43,6 +43,17 @@ enum PackageRef: Hashable {
     }
 }
 
+extension PackageRef {
+    /// Tools Ignition itself needs (dockutil, mas, mysides): installed by Apply, never planned in a profile.
+    var isIgnitionTool: Bool {
+        switch self {
+        case .cask(let t): return Packages.ignitionTools.casks.contains { $0.name == t }
+        case .formula(let t): return Packages.ignitionTools.brews.contains { $0.name == t }
+        default: return false
+        }
+    }
+}
+
 extension BrewPackage {
     var ref: PackageRef { kind == .cask ? .cask(token) : .formula(token) }
 }
@@ -176,6 +187,23 @@ struct PackagePills: View {
     var editable = true
 
     var body: some View {
+        if ref.isIgnitionTool {
+            HStack(spacing: 3) {
+                Image(systemName: "flame.fill")
+                Text("Ignition")
+            }
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 7).padding(.vertical, 2)
+            .background(Color.orange.opacity(0.18), in: .capsule)
+            .foregroundStyle(.orange)
+            .help("Needed by Ignition itself – Apply installs it automatically, no profile required")
+        } else {
+            planPills
+        }
+    }
+
+    @ViewBuilder
+    private var planPills: some View {
         let have = store.profiles(containing: ref, state: state)
         // Profiles that build on one that already has the package get it from there.
         let missing = state.profileNames.filter { name in
@@ -260,7 +288,7 @@ struct UninstallButton: View {
     @State private var confirm = false
 
     var body: some View {
-        let installed = assumeInstalled || store.isInstalled(ref)
+        let installed = (assumeInstalled || store.isInstalled(ref)) && !ref.isIgnitionTool
         let activeHave = store.profiles(containing: ref, state: state).filter { state.layers.contains($0) }
         if installed {
             Button { confirm = true } label: { Image(systemName: "trash") }
@@ -379,7 +407,7 @@ struct BrewInstalledView: View {
     var filtered: [BrewPackage] {
         store.installed.filter { p in
             (query.isEmpty || p.name.localizedCaseInsensitiveContains(query) || p.desc.localizedCaseInsensitiveContains(query))
-                && (!onlyUnplanned || store.profiles(containing: p.ref, state: state).isEmpty)
+                && (!onlyUnplanned || (!p.ref.isIgnitionTool && store.profiles(containing: p.ref, state: state).isEmpty))
         }
     }
 

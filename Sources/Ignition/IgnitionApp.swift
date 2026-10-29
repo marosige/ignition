@@ -161,7 +161,7 @@ struct SidebarView: View {
                 DisclosureGroup(isExpanded: $homebrewExpanded) {
                     Label("Discover", systemImage: "sparkle.magnifyingglass").tag(Destination.brewDiscover)
                     Label("Installed", systemImage: "checkmark.circle")
-                        .badge(store.installed.filter { store.profiles(containing: $0.ref, state: state).isEmpty }.count)
+                        .badge(store.installed.filter { !$0.ref.isIgnitionTool && store.profiles(containing: $0.ref, state: state).isEmpty }.count)
                         .tag(Destination.brewInstalled)
                 } label: {
                     Label("Homebrew", systemImage: "mug")

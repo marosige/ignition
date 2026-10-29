@@ -197,7 +197,7 @@ public enum Setup {
 
 extension Packages {
     /// Dependencies of Ignition's own features.
-    static var ignitionTools: Packages {
+    public static var ignitionTools: Packages {
         var p = Packages()
         p.brews = [PackageEntry(name: "mas", comment: "Mac App Store CLI"), PackageEntry(name: "dockutil", comment: "Dock layout")]
         p.casks = [PackageEntry(name: "mysides", comment: "Finder sidebar")]
