@@ -93,7 +93,7 @@ struct NewProfileSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var parent = ""
-    @State private var color: ProfileColor = .purple
+    @State private var color: ProfileColor = .violet
     @State private var icon: String?
 
     private var taken: Bool {
