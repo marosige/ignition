@@ -115,5 +115,6 @@
     "vscode": []
   },
   "extends": "base",
-  "icon": "briefcase"
+  "icon": "briefcase",
+  "color": "magenta"
 }

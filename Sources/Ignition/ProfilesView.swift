@@ -73,7 +73,7 @@ struct ProfileRow: View {
                                 .overlay(Circle().stroke(Color.primary.opacity(isCurrent(c) ? 0.8 : 0), lineWidth: 2))
                         }
                         .buttonStyle(.plain)
-                        .help(c.rawValue.capitalized)
+                        .help(c.title)
                     }
                 }
                 HStack(spacing: 4) {
