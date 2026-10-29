@@ -27,6 +27,26 @@ struct PreferencesView: View {
     }
 
     var body: some View {
+        ScrollViewReader { proxy in
+            form
+                .onAppear { focus(proxy) }
+                .onChange(of: state.focusPref) { _, _ in focus(proxy) }
+        }
+    }
+
+    /// Scrolls to the setting that was asked for and lets the highlight fade out.
+    private func focus(_ proxy: ScrollViewProxy) {
+        guard let id = state.focusPref else { return }
+        filter = .all
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            withAnimation { proxy.scrollTo(id, anchor: .center) }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) {
+            if state.focusPref == id { state.focusPref = nil }
+        }
+    }
+
+    private var form: some View {
         Form {
             Section {
                 HStack(spacing: 12) {
@@ -46,7 +66,7 @@ struct PreferencesView: View {
                 let rows = section.defs.filter(visible)
                 if !rows.isEmpty {
                     Section(section.name) {
-                        ForEach(rows) { def in PreferenceRow(def: def) }
+                        ForEach(rows) { def in PreferenceRow(def: def).id(def.id) }
                     }
                 }
             }
@@ -99,6 +119,13 @@ struct PreferenceRow: View {
             Spacer(minLength: 12)
             if planned { control } else { addButton }
         }
+        .padding(.vertical, 3)
+        .padding(.horizontal, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 9)
+                .fill(Color.accentColor.opacity(state.focusPref == def.id ? 0.22 : 0))
+        )
+        .animation(.easeInOut(duration: 0.4), value: state.focusPref)
     }
 
     /// What the Mac would get from the default, and what it has now.

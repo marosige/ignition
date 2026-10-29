@@ -33,6 +33,8 @@ final class AppState: ObservableObject {
     /// Detail pages pushed inside a section (e.g. a Homebrew package).
     @Published var path: [BrewPackage] = []
     @Published var showConnection = false
+    /// A setting to scroll to and flash after navigating from Apply or a diff.
+    @Published var focusPref: String?
     @Published var checking = false
     private var history: [Destination] = [.overview]
     private var historyIndex = 0

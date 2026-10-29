@@ -145,18 +145,25 @@ struct ApplyView: View {
                 if !changes.isEmpty {
                     Section {
                         ForEach(changes) { change in
-                            HStack {
-                                Text(change.def.title)
-                                Spacer()
-                                Text(state.formatted(change.def, change.from)).foregroundStyle(.secondary)
-                                Image(systemName: "arrow.right").font(.caption).foregroundStyle(.tertiary)
-                                Text(state.formatted(change.def, change.to)).bold()
+                            Button { state.reveal(change.def.id) } label: {
+                                HStack {
+                                    Image(systemName: change.def.category.symbol).foregroundStyle(.secondary).frame(width: 22)
+                                    Text(change.def.title)
+                                    Spacer()
+                                    Text(state.formatted(change.def, change.from)).foregroundStyle(.secondary)
+                                    Image(systemName: "arrow.right").font(.caption).foregroundStyle(.tertiary)
+                                    Text(state.formatted(change.def, change.to)).bold()
+                                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+                                }
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
+                            .help("Open this setting in the plan")
                         }
                     } header: {
                         Text("Settings that will change (\(changes.count))")
                     } footer: {
-                        Text("Packages, dotfiles, Dock and the rest are checked and fixed while applying.")
+                        Text("Click a setting to find it in the plan – change or remove it there if you do not want it. Packages, dotfiles, Dock and the rest are checked and fixed while applying.")
                     }
                 }
                 Section {

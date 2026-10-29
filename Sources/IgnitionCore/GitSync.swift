@@ -322,6 +322,55 @@ public struct GitSync {
         return out
     }
 
+    // MARK: Semantic diffs
+
+    public enum DiffSide { case mine, theirs }
+    public enum Revision { case head, working, remote, base }
+
+    private static let emptyTree = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+
+    /// Common ancestor of this Mac and GitHub (empty tree when there is none).
+    private func mergeBase() -> String {
+        guard hasCommits else { return GitSync.emptyTree }
+        let r = git(["merge-base", "HEAD", "origin/\(currentBranch)"])
+        return r.ok && !r.out.isEmpty ? r.out : GitSync.emptyTree
+    }
+
+    /// Files that changed on one side: (status letter, path).
+    public func changedPaths(_ side: DiffSide) -> [(status: String, path: String)] {
+        let out: String
+        switch side {
+        case .mine:
+            git(["add", "-N", "."])
+            out = git(hasCommits ? ["diff", "HEAD", "--name-status"] : ["diff", "--name-status"]).out
+        case .theirs:
+            out = git(["diff", mergeBase(), "origin/\(currentBranch)", "--name-status"]).out
+        }
+        return out.components(separatedBy: "\n").compactMap { line in
+            let parts = line.components(separatedBy: "\t")
+            guard parts.count >= 2 else { return nil }
+            return (String(parts[0].prefix(1)), parts[parts.count - 1])
+        }
+    }
+
+    /// A file's content at a revision.
+    public func fileData(_ path: String, at rev: Revision) -> Data? {
+        switch rev {
+        case .working:
+            return try? Data(contentsOf: dir.appendingPathComponent(path))
+        case .head:
+            return committedFile(path)
+        case .remote:
+            let r = git(["show", "origin/\(currentBranch):\(path)"])
+            return r.ok ? r.out.data(using: .utf8) : nil
+        case .base:
+            let base = mergeBase()
+            guard base != GitSync.emptyTree else { return nil }
+            let r = git(["show", "\(base):\(path)"])
+            return r.ok ? r.out.data(using: .utf8) : nil
+        }
+    }
+
     /// A file as stored in the last commit on this Mac.
     public func committedFile(_ path: String) -> Data? {
         let r = git(["show", "HEAD:\(path)"])
