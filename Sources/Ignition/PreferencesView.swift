@@ -90,9 +90,6 @@ struct PreferenceRow: View {
         let owner = state.controlOrigin(for: def)
         let live = state.liveValue(def)
         HStack(alignment: .center, spacing: 10) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(owner.map { state.color(of: $0.profile) } ?? Color.clear)
-                .frame(width: 3, height: 30)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(def.title).layoutPriority(1)
@@ -104,6 +101,14 @@ struct PreferenceRow: View {
                         DefaultPill(def: def, origins: origins)
                     }
                     OriginPills(def: def, origins: origins)
+                    if owner == nil, def.osDefault != nil, live != def.osDefault {
+                        Text("Not in a profile")
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 7).padding(.vertical, 2)
+                            .background(Color.orange.opacity(0.18), in: .capsule)
+                            .foregroundStyle(.orange)
+                            .help("This Mac has a value that differs from the default, but no profile has it. Use Add to save it.")
+                    }
                     if owner != nil {
                         SaveToProfileMenu(def: def, value: live, pill: true)
                     }

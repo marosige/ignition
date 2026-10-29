@@ -75,6 +75,7 @@ final class AppState: ObservableObject {
     @Published var log: [String] = []
     @Published var connected = false
 
+    private var lastWritten: [String: (PrefValue, Date)] = [:]
     private var pendingRestart = Set<ProcessToRestart>()
     private var restartTask: Task<Void, Never>?
 
@@ -251,6 +252,8 @@ final class AppState: ObservableObject {
         var values: [String: PrefValue] = [:]
         for def in PreferenceCatalog.all {
             if let v = DefaultsService.read(def) { values[def.id] = v }
+            // The preference cache can lag behind a write we just made; trust our own write briefly.
+            if let (written, when) = lastWritten[def.id], Date().timeIntervalSince(when) < 5 { values[def.id] = written }
         }
         live = values
     }
@@ -392,6 +395,7 @@ final class AppState: ObservableObject {
         let r = DefaultsService.write(def, value)
         if !r.ok { errorMessage = "\(def.title): \(r.combined.isEmpty ? "failed" : r.combined)"; return }
         live[def.id] = value
+        lastWritten[def.id] = (value, Date())
         scheduleRestart(def.restart)
     }
 
