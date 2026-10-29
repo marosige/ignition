@@ -30,6 +30,18 @@ struct PrefOrigin: Identifiable {
 }
 
 @MainActor
+/// One file that both sides changed, with what each side did in plain terms.
+struct ConflictInfo: Identifiable {
+    let file: String
+    let profile: String?
+    let mine: [PlanChange]
+    let theirs: [PlanChange]
+    let mineText: String
+    let theirsText: String
+    var id: String { file }
+}
+
+@MainActor
 final class AppState: ObservableObject {
     /// One instance for the whole app: SwiftUI may rebuild the App value several times,
     /// and every extra AppState would read the keychain again.
@@ -53,7 +65,9 @@ final class AppState: ObservableObject {
     @Published var changedFiles: [String] = []
     @Published var commits: [String] = []
     @Published var syncInfo: SyncInfo?
-    @Published var showConflicts = false
+    @Published var conflicts: [ConflictInfo] = []
+    /// true = keep this Mac's version, false = take GitHub's.
+    @Published var conflictChoices: [String: Bool] = [:]
     @Published var showDiff = false
     @Published var busy = false
     @Published var status: String?
@@ -465,7 +479,7 @@ final class AppState: ObservableObject {
         connected = FileManager.default.fileExists(atPath: AppPaths.repo.appendingPathComponent(".git").path)
         let out = await Task.detached { sync.sync(push: false) }.value
         if case .failed(let m) = out, !m.isEmpty { errorMessage = m }
-        if case .conflicts = out { showConflicts = true }
+        if case .conflicts = out { navigate(to: .sync) }
         reloadProfiles()
         await checkSync()
     }
@@ -475,7 +489,11 @@ final class AppState: ObservableObject {
         guard sync != nil, connected else { navigate(to: .sync); showConnection = true; return }
         guard let info = syncInfo else { await checkSync(); return }
         switch info.kind {
-        case .conflict: showConflicts = true
+        case .conflict:
+            navigate(to: .sync)
+            if !conflicts.isEmpty, conflicts.allSatisfy({ conflictChoices[$0.file] != nil }) {
+                await finishConflicts(choices: conflictChoices)
+            }
         case .upToDate, .error, .unconfigured, .notConnected: await checkSync()
         case .needsPull: await runSync(push: false)
         case .needsPush, .diverged: await runSync(push: true)
@@ -491,7 +509,7 @@ final class AppState: ObservableObject {
         status = nil
         switch outcome {
         case .done: break
-        case .conflicts: showConflicts = true
+        case .conflicts: navigate(to: .sync)
         case .failed(let m): errorMessage = m
         }
         reloadProfiles()
@@ -510,16 +528,47 @@ final class AppState: ObservableObject {
         busy = false
         status = nil
         if case .failed(let m) = outcome { errorMessage = m }
-        showConflicts = false
+        conflictChoices = [:]
+        conflicts = []
         reloadProfiles()
         refreshLive()
         await checkSync()
     }
 
+    /// Reads the conflicted files and works out what each side changed since they diverged.
+    func loadConflicts() async {
+        guard let sync else { return }
+        let folder = AppPaths.normalizeFolder(device.configFolder)
+        let raw = await Task.detached { () -> [(file: String, base: String, mine: String, theirs: String)] in
+            sync.conflicts().map { f in
+                let v = sync.conflictVersions(f)
+                return (f, sync.conflictBase(f), v.mine, v.theirs)
+            }
+        }.value
+        let decoder = JSONDecoder()
+        conflicts = raw.map { item in
+            var profile: String?
+            var mine: [PlanChange] = [], theirs: [PlanChange] = []
+            let marker = folder + "/profiles/"
+            if item.file.hasPrefix(marker), item.file.hasSuffix("/profile.json"),
+               let name = item.file.dropFirst(marker.count).split(separator: "/").first.map(String.init) {
+                profile = name
+                func decode(_ text: String) -> Profile? { text.data(using: .utf8).flatMap { try? decoder.decode(Profile.self, from: $0) } }
+                let base = decode(item.base)
+                if let m = decode(item.mine) { mine = planChanges(ProfileDelta(name: name, old: base, new: m, dotfiles: [])) }
+                if let t = decode(item.theirs) { theirs = planChanges(ProfileDelta(name: name, old: base, new: t, dotfiles: [])) }
+            }
+            return ConflictInfo(file: item.file, profile: profile, mine: mine, theirs: theirs,
+                                mineText: item.mine, theirsText: item.theirs)
+        }
+        conflictChoices = conflictChoices.filter { key, _ in conflicts.contains { $0.file == key } }
+    }
+
     func abortMerge() async {
         guard let sync else { return }
         await Task.detached { sync.abortMerge() }.value
-        showConflicts = false
+        conflictChoices = [:]
+        conflicts = []
         reloadProfiles()
         await checkSync(fetch: false)
     }

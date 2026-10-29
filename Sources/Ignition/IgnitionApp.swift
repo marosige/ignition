@@ -58,7 +58,6 @@ struct ContentView: View {
             ToolbarItem(placement: .automatic) { ApplyButton() }
             ToolbarItem(placement: .automatic) { SyncButton() }
         }
-        .sheet(isPresented: $state.showConflicts) { ConflictSheet() }
         .sheet(isPresented: $state.showDiff) { DiffSheet() }
         .sheet(isPresented: $state.showConnection) { ConnectionSheet() }
         .task {

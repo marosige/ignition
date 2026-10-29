@@ -272,6 +272,11 @@ public struct GitSync {
         (git(["show", ":2:\(file)"]).out, git(["show", ":3:\(file)"]).out)
     }
 
+    /// The common ancestor of a conflicted file (empty when it did not exist).
+    public func conflictBase(_ file: String) -> String {
+        git(["show", ":1:\(file)"]).out
+    }
+
     public func resolve(_ file: String, useMine: Bool) {
         git(["checkout", useMine ? "--ours" : "--theirs", "--", file])
         git(["add", "--", file])

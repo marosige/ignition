@@ -19,12 +19,21 @@ struct SyncView: View {
         let hasIncoming = (info?.behind ?? 0) > 0
         Form {
             Section { StatusCard() }
-            if hasLocal {
+            if info?.kind == .conflict {
+                Section {
+                    ForEach(state.conflicts) { ConflictCard(conflict: $0) }
+                } header: {
+                    Text("Conflicts")
+                } footer: {
+                    Text("The same file was changed on this Mac and on GitHub. Pick the version to keep for each one.")
+                }
+            }
+            if hasLocal && info?.kind != .conflict {
                 Section {
                     ChangeList(side: .mine)
                 } header: { Text("Changes to save") }
             }
-            if hasIncoming {
+            if hasIncoming && info?.kind != .conflict {
                 Section {
                     ChangeList(side: .theirs)
                 } header: { Text("New on GitHub") }
@@ -33,6 +42,7 @@ struct SyncView: View {
         .formStyle(.grouped)
         .navigationTitle("GitHub Sync")
         .task { await state.checkSync() }
+        .task(id: info?.conflicts ?? []) { if info?.kind == .conflict { await state.loadConflicts() } }
     }
 }
 
@@ -204,8 +214,12 @@ struct SyncInfoPopover: View {
                 }
                 .frame(maxHeight: 220)
             }
-            Button("Show local copy in Finder") { NSWorkspace.shared.activateFileViewerSelecting([AppPaths.repo]) }
-                .buttonStyle(.glass)
+            HStack {
+                Button("Show local copy in Finder") { NSWorkspace.shared.activateFileViewerSelecting([AppPaths.repo]) }
+                    .buttonStyle(.glass)
+                Button("Technical diff…") { state.showDiff = true }
+                    .buttonStyle(.glass)
+            }
         }
         .padding(16)
         .frame(width: 440)
@@ -260,14 +274,15 @@ struct StatusCard: View {
             if let info, kind != .unconfigured, kind != .notConnected { versions(info) }
             HStack {
                 Button { Task { await state.syncPrimary() } } label: {
-                    Text(kind.buttonTitle(changes: state.changedFiles.count))
+                    Text(kind == .conflict ? "Finish and save" : kind.buttonTitle(changes: state.changedFiles.count))
                 }
                 .buttonStyle(.glassProminent)
-                .disabled(state.busy)
-
-                Button("View changes") { state.showDiff = true }
-                    .buttonStyle(.glass)
-                    .disabled(info == nil || (info!.changedFiles.isEmpty && info!.ahead == 0 && info!.behind == 0))
+                .disabled(state.busy || (kind == .conflict && !(state.conflicts.count > 0
+                    && state.conflicts.allSatisfy { state.conflictChoices[$0.file] != nil })))
+                if kind == .conflict {
+                    Button("Cancel merge", role: .destructive) { Task { await state.abortMerge() } }
+                        .buttonStyle(.glass)
+                }
             }
         }
         .padding(.vertical, 6)
@@ -408,85 +423,61 @@ struct DiffText: View {
 
 // MARK: - Conflicts
 
-struct ConflictSheet: View {
+/// One conflicted file: what each side did, and which version to keep.
+struct ConflictCard: View {
     @EnvironmentObject var state: AppState
-    @State private var files: [String] = []
-    @State private var versions: [String: (mine: String, theirs: String)] = [:]
-    @State private var choice: [String: Bool] = [:]   // true = keep this Mac's
+    let conflict: ConflictInfo
 
     var body: some View {
-        VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Resolve conflicts").font(.title2.bold())
-                Text("The same file changed on this Mac and on GitHub. Pick the version to keep for each file.")
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                if let profile = conflict.profile { ProfileChip(name: profile, showName: true) }
+                Text(conflict.profile == nil ? conflict.file : "settings, software and layout")
+                    .font(.subheadline).foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
-            Divider()
-            ScrollView {
-                VStack(spacing: 22) {
-                    ForEach(files, id: \.self) { file in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(file).font(.headline)
-                            HStack(alignment: .top, spacing: 12) {
-                                column("This Mac", versions[file]?.mine ?? "", selected: choice[file] == true) { choice[file] = true }
-                                column("GitHub", versions[file]?.theirs ?? "", selected: choice[file] == false) { choice[file] = false }
+            HStack(alignment: .top, spacing: 12) {
+                side("This Mac", systemImage: "laptopcomputer", changes: conflict.mine, text: conflict.mineText, mine: true)
+                side("GitHub", systemImage: "icloud", changes: conflict.theirs, text: conflict.theirsText, mine: false)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func side(_ title: String, systemImage: String, changes: [PlanChange], text: String, mine: Bool) -> some View {
+        let selected = state.conflictChoices[conflict.file] == mine
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label(title, systemImage: systemImage).font(.subheadline.bold())
+                Spacer()
+                if selected {
+                    Button("Keeping this") { state.conflictChoices[conflict.file] = mine }.buttonStyle(.glassProminent)
+                } else {
+                    Button("Keep this") { state.conflictChoices[conflict.file] = mine }.buttonStyle(.glass)
+                }
+            }
+            VStack(alignment: .leading, spacing: 5) {
+                if conflict.profile != nil {
+                    if changes.isEmpty { Text("No changes of its own").font(.caption).foregroundStyle(.secondary) }
+                    ForEach(changes.prefix(12)) { change in
+                        HStack(spacing: 6) {
+                            Image(systemName: change.kind == .added ? "plus.circle.fill" : (change.kind == .removed ? "minus.circle.fill" : "pencil.circle.fill"))
+                                .foregroundStyle(change.kind == .added ? Color.green : (change.kind == .removed ? .red : .orange))
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text(change.title).font(.caption)
+                                if let detail = change.detail { Text(detail).font(.caption2).foregroundStyle(.secondary) }
                             }
                         }
                     }
-                }
-                .padding()
-            }
-            Divider()
-            HStack {
-                Button("Cancel merge", role: .destructive) { Task { await state.abortMerge() } }
-                    .buttonStyle(.glass)
-                Spacer()
-                Text("\(choice.count) of \(files.count) chosen").foregroundStyle(.secondary)
-                Button("Finish and save") { Task { await state.finishConflicts(choices: choice) } }
-                    .buttonStyle(.glassProminent)
-                    .disabled(files.isEmpty || choice.count < files.count || state.busy)
-            }
-            .padding()
-        }
-        .frame(width: 860, height: 620)
-        .task { await load() }
-    }
-
-    private func column(_ title: String, _ text: String, selected: Bool, pick: @escaping () -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(title).font(.subheadline.bold())
-                Spacer()
-                if selected {
-                    Button("Keeping this") { pick() }.buttonStyle(.glassProminent)
+                    if changes.count > 12 { Text("and \(changes.count - 12) more…").font(.caption).foregroundStyle(.secondary) }
                 } else {
-                    Button("Keep this") { pick() }.buttonStyle(.glass)
+                    Text(text).font(.caption.monospaced()).lineLimit(8)
                 }
             }
-            ScrollView {
-                Text(text).font(.caption.monospaced())
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)
-                    .padding(8)
-            }
-            .frame(height: 170)
-            .background(.quaternary.opacity(0.4), in: .rect(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(selected ? Color.accentColor : .clear, lineWidth: 2))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(10)
+            .background(.quaternary.opacity(0.35), in: .rect(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(selected ? Color.accentColor : .clear, lineWidth: 2))
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private func load() async {
-        guard let sync = state.sync else { return }
-        let result = await Task.detached { () -> ([String], [String: (mine: String, theirs: String)]) in
-            let list = sync.conflicts()
-            var v: [String: (mine: String, theirs: String)] = [:]
-            for f in list { v[f] = sync.conflictVersions(f) }
-            return (list, v)
-        }.value
-        files = result.0
-        versions = result.1
     }
 }
