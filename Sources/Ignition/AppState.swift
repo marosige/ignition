@@ -31,6 +31,10 @@ struct PrefOrigin: Identifiable {
 
 @MainActor
 final class AppState: ObservableObject {
+    /// One instance for the whole app: SwiftUI may rebuild the App value several times,
+    /// and every extra AppState would read the keychain again.
+    static let shared = AppState()
+
     @Published var destination: Destination? = .overview
     /// Detail pages pushed inside a section (e.g. a Homebrew package).
     @Published var path: [BrewPackage] = []

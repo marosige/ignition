@@ -4,7 +4,7 @@ import IgnitionCore
 
 @main
 struct IgnitionApp: App {
-    @StateObject private var state = AppState()
+    @StateObject private var state = AppState.shared
     @StateObject private var store = BrewStore()
 
     var body: some Scene {
