@@ -75,6 +75,9 @@ struct DockEditorView: View {
         List {
             Section { ProfileTargetPicker() }
             Section {
+                fixedRow(name: "Finder", note: "always first") {
+                    AppIcon(path: "/System/Library/CoreServices/Finder.app")
+                }
                 ForEach(items) { item in
                     HStack(spacing: 12) {
                         Image(systemName: "line.3.horizontal").foregroundStyle(.tertiary)
@@ -108,6 +111,9 @@ struct DockEditorView: View {
                 }
                 .onMove { from, to in update { $0.move(fromOffsets: from, toOffset: to) } }
                 .onDelete { offsets in update { $0.remove(atOffsets: offsets) } }
+                fixedRow(name: "Trash", note: "always last") {
+                    Image(systemName: "trash.fill").font(.title3).foregroundStyle(.secondary).frame(width: 28, height: 28)
+                }
             } header: {
                 Text("Pinned items, left to right")
             } footer: {
@@ -137,6 +143,20 @@ struct DockEditorView: View {
         .sheet(isPresented: $showPicker) {
             AppPickerSheet { app in update { $0.append(DockItem(kind: .app, path: app.path)) } }
         }
+    }
+
+    /// Items macOS always keeps in place: shown, but not editable.
+    private func fixedRow<Icon: View>(name: String, note: String, @ViewBuilder icon: () -> Icon) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "lock.fill").font(.caption).foregroundStyle(.tertiary).frame(width: 16)
+            icon()
+            Text(name)
+            Text(note).font(.caption).foregroundStyle(.secondary)
+            Spacer()
+        }
+        .opacity(0.65)
+        .moveDisabled(true)
+        .deleteDisabled(true)
     }
 
     private func update(_ change: (inout [DockItem]) -> Void) {
