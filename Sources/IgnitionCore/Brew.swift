@@ -145,6 +145,47 @@ public enum Brew {
         return nil
     }
 
+    // MARK: Updates
+
+    public struct Outdated: Hashable {
+        public let key: String      // "cask:token" or "formula:token"
+        public let from: String
+        public let to: String
+    }
+
+    /// Refreshes Homebrew's package index (`brew update`).
+    @discardableResult
+    public static func refreshIndex() -> ShellResult { Shell.run("brew", ["update", "--quiet"]) }
+
+    /// Installed packages that have a newer version.
+    public static func outdated() -> [Outdated] {
+        guard isInstalled else { return [] }
+        let r = Shell.run("brew", ["outdated", "--json=v2"])
+        guard r.ok, let data = r.out.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [] }
+        func versions(_ value: Any?) -> String {
+            if let list = value as? [String] { return list.joined(separator: ", ") }
+            return value as? String ?? ""
+        }
+        var out: [Outdated] = []
+        for f in (json["formulae"] as? [[String: Any]]) ?? [] {
+            out.append(Outdated(key: "formula:\(f["name"] as? String ?? "")",
+                                from: versions(f["installed_versions"]), to: f["current_version"] as? String ?? ""))
+        }
+        for c in (json["casks"] as? [[String: Any]]) ?? [] {
+            out.append(Outdated(key: "cask:\(c["name"] as? String ?? "")",
+                                from: versions(c["installed_versions"]), to: c["current_version"] as? String ?? ""))
+        }
+        return out
+    }
+
+    /// Upgrades one package, or everything when `package` is nil.
+    @discardableResult
+    public static func upgrade(_ package: BrewPackage?, log: @escaping (String) -> Void) -> ShellResult {
+        guard let package else { return Shell.run("brew", ["upgrade"], onLine: log) }
+        return Shell.run("brew", ["upgrade"] + (package.kind == .cask ? ["--cask"] : []) + [package.token], onLine: log)
+    }
+
     // MARK: Actions
 
     @discardableResult
@@ -200,6 +241,26 @@ public enum Mas {
             }
             return MasEntry(id: id, name: name)
         }
+    }
+
+    /// App Store apps with a newer version: (id, from, to).
+    public static func outdated() -> [(id: Int, from: String, to: String)] {
+        guard isInstalled else { return [] }
+        return Shell.run("mas", ["outdated"]).out.components(separatedBy: "\n").compactMap { line in
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard let space = trimmed.firstIndex(of: " "), let id = Int(trimmed[..<space]) else { return nil }
+            var from = "", to = ""
+            if let open = trimmed.lastIndex(of: "("), trimmed.hasSuffix(")") {
+                let parts = trimmed[trimmed.index(after: open)..<trimmed.index(before: trimmed.endIndex)].components(separatedBy: "->")
+                if parts.count == 2 { from = parts[0].trimmingCharacters(in: .whitespaces); to = parts[1].trimmingCharacters(in: .whitespaces) }
+            }
+            return (id, from, to)
+        }
+    }
+
+    @discardableResult
+    public static func upgrade(_ id: Int?, log: @escaping (String) -> Void) -> ShellResult {
+        Shell.run("mas", ["upgrade"] + (id.map { [String($0)] } ?? []), onLine: log)
     }
 
     @discardableResult

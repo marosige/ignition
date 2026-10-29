@@ -54,6 +54,23 @@ extension PackageRef {
     }
 }
 
+extension PackageRef {
+    /// Stable key for update/working state (matches BrewPackage.id for Homebrew items).
+    var key: String {
+        switch self {
+        case .cask(let t): return "cask:\(t)"
+        case .formula(let t): return "formula:\(t)"
+        case .mas(let id, _): return "mas:\(id)"
+        case .vscode(let t): return "vscode:\(t)"
+        }
+    }
+}
+
+struct UpdateInfo: Hashable {
+    let from: String
+    let to: String
+}
+
 extension BrewPackage {
     var ref: PackageRef { kind == .cask ? .cask(token) : .formula(token) }
 }
@@ -71,6 +88,9 @@ final class BrewStore: ObservableObject {
     @Published var loadError: String?
     @Published var logs: [String: [String]] = [:]
     @Published var working: Set<String> = []
+    @Published var updates: [String: UpdateInfo] = [:]
+    @Published var checkingUpdates = false
+    @Published var lastUpdateCheck: Date?
 
     var installedIDs: Set<String> { Set(installed.map(\.id)) }
 
@@ -108,6 +128,49 @@ final class BrewStore: ObservableObject {
         case .mas(let id, _): return masInstalled.contains(id)
         case .vscode(let t): return vscodeInstalled.contains(t.lowercased())
         }
+    }
+
+    // MARK: Updates
+
+    func update(for ref: PackageRef) -> UpdateInfo? { updates[ref.key] }
+
+    /// Asks Homebrew and the App Store what has a newer version. `refresh` updates Homebrew's index first.
+    func checkUpdates(refresh: Bool) async {
+        checkingUpdates = true
+        defer { checkingUpdates = false }
+        let found = await Task.detached { () -> [String: UpdateInfo] in
+            if refresh { Brew.refreshIndex() }
+            var out: [String: UpdateInfo] = [:]
+            for o in Brew.outdated() { out[o.key] = UpdateInfo(from: o.from, to: o.to) }
+            for m in Mas.outdated() { out["mas:\(m.id)"] = UpdateInfo(from: m.from, to: m.to) }
+            return out
+        }.value
+        updates = found
+        lastUpdateCheck = Date()
+    }
+
+    /// Updates one item, or everything (`ref` nil).
+    func upgrade(_ ref: PackageRef?, brew: BrewPackage?) async {
+        let key = ref?.key ?? "all"
+        working.insert(key)
+        logs[key] = []
+        let ok = await Task.detached { [weak self] () -> Bool in
+            let log: (String) -> Void = { line in Task { @MainActor in self?.logs[key, default: []].append(line) } }
+            guard let ref else {
+                let a = Brew.upgrade(nil, log: log).ok
+                let b = Mas.isInstalled ? Mas.upgrade(nil, log: log).ok : true
+                return a && b
+            }
+            switch ref {
+            case .cask, .formula: return Brew.upgrade(brew, log: log).ok
+            case .mas(let id, _): return Mas.upgrade(id, log: log).ok
+            case .vscode: return true
+            }
+        }.value
+        working.remove(key)
+        if !ok { logs[key, default: []].append("✗ the update did not finish") }
+        await refreshEverything()
+        await checkUpdates(refresh: false)
     }
 
     // MARK: Install / uninstall (this Mac)
@@ -492,6 +555,7 @@ struct InstalledView: View {
     @State private var planFilter: PlanFilter = .all
     @State private var profileFilter: String?
     @State private var sourceFilter: SourceFilter = .all
+    @State private var updatesOnly = false
 
     enum PlanFilter: String, CaseIterable, Identifiable {
         case all = "All", planned = "In a profile", open = "Not in a profile"
@@ -516,6 +580,7 @@ struct InstalledView: View {
     private var filtered: [SoftwareItem] {
         items.filter { item in
             guard query.isEmpty || item.name.localizedCaseInsensitiveContains(query) || item.desc.localizedCaseInsensitiveContains(query) else { return false }
+            if updatesOnly, store.updates[item.ref.key] == nil { return false }
             switch sourceFilter {
             case .all: break
             case .apps: if item.source != .cask { return false }
@@ -554,6 +619,7 @@ struct InstalledView: View {
                     Text("\(filtered.count) of \(items.count)").font(.caption).foregroundStyle(.secondary)
                 }
             }
+            Section { updatesBar }
             Section {
                 ForEach(filtered) { row($0) }
             }
@@ -567,7 +633,42 @@ struct InstalledView: View {
         .toolbar {
             Button { Task { await store.refreshEverything() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
         }
-        .task { await store.refreshEverything() }
+        .task {
+            await store.refreshEverything()
+            await store.checkUpdates(refresh: false)
+        }
+    }
+
+    /// A small app manager: what can be updated, and one button for all of it.
+    private var updatesBar: some View {
+        HStack(spacing: 12) {
+            if store.checkingUpdates {
+                ProgressView().controlSize(.small)
+                Text("Checking for updates…")
+            } else if store.updates.isEmpty {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                Text("Everything is up to date")
+                if let last = store.lastUpdateCheck { Text("checked \(ago(last))").font(.caption).foregroundStyle(.secondary) }
+            } else {
+                Image(systemName: "arrow.down.circle.fill").foregroundStyle(.orange)
+                Text("\(store.updates.count) update\(store.updates.count == 1 ? "" : "s") available").fontWeight(.semibold)
+                Toggle("Only these", isOn: $updatesOnly).toggleStyle(.button).buttonStyle(.glass).controlSize(.small)
+            }
+            Spacer()
+            Button { Task { await store.checkUpdates(refresh: true) } } label: {
+                Label("Check", systemImage: "arrow.triangle.2.circlepath")
+            }
+            .buttonStyle(.glass).controlSize(.small)
+            .disabled(store.checkingUpdates || store.working.contains("all"))
+            if !store.updates.isEmpty {
+                if store.working.contains("all") {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Button("Update All") { Task { await store.upgrade(nil, brew: nil) } }
+                        .buttonStyle(.glassProminent).controlSize(.small)
+                }
+            }
+        }
     }
 
     private func row(_ item: SoftwareItem) -> some View {
@@ -578,13 +679,25 @@ struct InstalledView: View {
             } label: {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(item.name).font(.headline)
-                    Text(item.desc).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    if let info = store.updates[item.ref.key] {
+                        Text("\(info.from) → \(info.to)").font(.caption).foregroundStyle(.orange)
+                    } else {
+                        Text(item.desc).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(item.package == nil)
             Spacer()
+            if store.updates[item.ref.key] != nil {
+                if store.working.contains(item.ref.key) {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Button("Update") { Task { await store.upgrade(item.ref, brew: item.package) } }
+                        .buttonStyle(.glass).controlSize(.small)
+                }
+            }
             PackagePills(ref: item.ref, comment: item.desc)
             UninstallButton(ref: item.ref, assumeInstalled: true)
         }
@@ -748,6 +861,12 @@ struct PackageDetailView: View {
             ProgressView().controlSize(.large)
         } else if isInstalled {
             HStack(spacing: 10) {
+                if let info = store.update(for: package.ref) {
+                    Button { Task { await store.upgrade(package.ref, brew: package) } } label: {
+                        Label("Update to \(info.to)", systemImage: "arrow.down.circle")
+                    }
+                    .buttonStyle(.glassProminent).controlSize(.large)
+                }
                 if let appURL {
                     Button {
                         NSWorkspace.shared.open(appURL)
