@@ -184,14 +184,18 @@ final class AppState: ObservableObject {
         refreshChanges()
     }
 
-    func createProfile(_ name: String) {
+    @discardableResult
+    func createProfile(_ name: String, extends parent: String? = nil, color: ProfileColor? = nil, icon: String? = nil) -> Bool {
         let slug = name.lowercased().filter { $0.isLetter || $0.isNumber || $0 == "-" }
-        guard !slug.isEmpty, profiles[slug] == nil else { return }
+        guard !slug.isEmpty, profiles[slug] == nil else { return false }
         var profile = Profile(title: name)
-        if profileNames.contains("base") { profile.extends = "base" }
+        profile.extends = parent
+        profile.color = color?.rawValue
+        profile.icon = icon
         profiles[slug] = profile
         persist(slug)
         profileNames = ConfigStore.profileNames()
+        return true
     }
 
     func deleteProfile(_ name: String) {

@@ -96,17 +96,6 @@ struct OverviewView: View {
 
 // MARK: - Sync
 
-struct NewProfileRow: View {
-    @EnvironmentObject var state: AppState
-    @State private var name = ""
-    var body: some View {
-        HStack {
-            TextField("New profile", text: $name, prompt: Text("e.g. travel"))
-            Button("Create") { state.createProfile(name); name = "" }.disabled(name.isEmpty)
-        }
-    }
-}
-
 // MARK: - Apply
 
 struct ApplyView: View {

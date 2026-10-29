@@ -4,6 +4,7 @@ import IgnitionCore
 struct ProfilesView: View {
     @EnvironmentObject var state: AppState
     @State private var deleting: String?
+    @State private var creating = false
 
     var body: some View {
         Form {
@@ -16,10 +17,16 @@ struct ProfilesView: View {
             } footer: {
                 Text("A profile can build on another one: Work building on Base starts from everything in Base and adds or overrides things. Switching a profile on switches on what it builds on. “Edit” lets you change any profile, even one that is not on this Mac – nothing is applied here until it is switched on.")
             }
-            Section("New profile") { NewProfileRow() }
         }
         .formStyle(.grouped)
         .navigationTitle("Profiles")
+        .toolbar {
+            ToolbarItem {
+                Button { creating = true } label: { Label("New Profile", systemImage: "plus") }
+                    .help("New profile")
+            }
+        }
+        .sheet(isPresented: $creating) { NewProfileSheet() }
         .confirmationDialog("Delete the “\((deleting ?? "").capitalized)” profile?", isPresented: Binding(
             get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
             Button("Delete profile", role: .destructive) {
@@ -32,6 +39,108 @@ struct ProfilesView: View {
     }
 }
 
+// MARK: - Pickers
+
+struct ColorSwatches: View {
+    let selected: ProfileColor?
+    let onPick: (ProfileColor) -> Void
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ForEach(ProfileColor.allCases) { c in
+                Button { onPick(c) } label: {
+                    Circle().fill(c.color).frame(width: 14, height: 14)
+                        .overlay(Circle().stroke(Color.primary.opacity(selected == c ? 0.8 : 0), lineWidth: 2))
+                }
+                .buttonStyle(.plain)
+                .help(c.title)
+            }
+        }
+    }
+}
+
+struct IconChoices: View {
+    let selected: String?
+    let tint: Color
+    let onPick: (String?) -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Button { onPick(nil) } label: {
+                Text("Aa").font(.caption2.weight(.semibold))
+                    .frame(width: 22, height: 22)
+                    .background(Color.secondary.opacity(selected == nil ? 0.3 : 0.1), in: .rect(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+            .help("No icon – show the name")
+            ForEach(ProfileIcons.all, id: \.symbol) { item in
+                Button { onPick(item.symbol) } label: {
+                    Image(systemName: item.symbol).font(.caption)
+                        .frame(width: 22, height: 22)
+                        .background(tint.opacity(selected == item.symbol ? 0.3 : 0), in: .rect(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+                .help(item.label)
+            }
+        }
+    }
+}
+
+// MARK: - New profile
+
+struct NewProfileSheet: View {
+    @EnvironmentObject var state: AppState
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var parent = ""
+    @State private var color: ProfileColor = .purple
+    @State private var icon: String?
+
+    private var taken: Bool {
+        let slug = name.lowercased().filter { $0.isLetter || $0.isNumber || $0 == "-" }
+        return state.profileNames.contains(slug)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Form {
+                Section("New profile") {
+                    TextField("Name", text: $name, prompt: Text("e.g. School"))
+                    if taken { Text("A profile with this name already exists.").font(.caption).foregroundStyle(.red) }
+                    Picker("Builds on", selection: $parent) {
+                        Text("Nothing (stand-alone)").tag("")
+                        ForEach(state.profileNames, id: \.self) { Text($0.capitalized).tag($0) }
+                    }
+                    LabeledContent("Colour") { ColorSwatches(selected: color) { color = $0 } }
+                    LabeledContent("Icon") { IconChoices(selected: icon, tint: color.color) { icon = $0 } }
+                }
+                Section("Preview") {
+                    HStack(spacing: 8) {
+                        if let icon { Image(systemName: icon) }
+                        Text(name.isEmpty ? "Name" : name.capitalized).font(.headline)
+                    }
+                    .foregroundStyle(color.color)
+                }
+            }
+            .formStyle(.grouped)
+            HStack {
+                Button("Cancel") { dismiss() }.buttonStyle(.glass)
+                Spacer()
+                Button("Create") {
+                    if state.createProfile(name, extends: parent.isEmpty ? nil : parent, color: color, icon: icon) { dismiss() }
+                }
+                .buttonStyle(.glassProminent)
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || taken)
+            }
+            .padding()
+        }
+        .frame(width: 520, height: 520)
+        .onAppear { parent = state.profileNames.contains("base") ? "base" : "" }
+    }
+}
+
+// MARK: - Row
+
 struct ProfileRow: View {
     @EnvironmentObject var state: AppState
     let name: String
@@ -42,6 +151,7 @@ struct ProfileRow: View {
         let on = state.layers.contains(name)
         let needed = state.requiredBy(name)
         let packages = profile.packages.brews.count + profile.packages.casks.count + profile.packages.mas.count
+        let selectedColor = ProfileColor.allCases.first { $0.color == state.color(of: name) }
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
@@ -65,35 +175,13 @@ struct ProfileRow: View {
                     .controlSize(.small)
                     .fixedSize()
                 }
-                HStack(spacing: 5) {
+                HStack(spacing: 8) {
                     Text("Colour").font(.caption).foregroundStyle(.secondary)
-                    ForEach(ProfileColor.allCases) { c in
-                        Button { state.setColor(c, of: name) } label: {
-                            Circle().fill(c.color).frame(width: 14, height: 14)
-                                .overlay(Circle().stroke(Color.primary.opacity(isCurrent(c) ? 0.8 : 0), lineWidth: 2))
-                        }
-                        .buttonStyle(.plain)
-                        .help(c.title)
-                    }
+                    ColorSwatches(selected: selectedColor) { state.setColor($0, of: name) }
                 }
-                HStack(spacing: 4) {
+                HStack(spacing: 8) {
                     Text("Icon").font(.caption).foregroundStyle(.secondary)
-                    Button { state.setIcon(nil, of: name) } label: {
-                        Text("Aa").font(.caption2.weight(.semibold))
-                            .frame(width: 22, height: 22)
-                            .background(Color.secondary.opacity(profile.icon == nil ? 0.3 : 0.1), in: .rect(cornerRadius: 6))
-                    }
-                    .buttonStyle(.plain)
-                    .help("No icon – show the name")
-                    ForEach(ProfileIcons.all, id: \.symbol) { item in
-                        Button { state.setIcon(item.symbol, of: name) } label: {
-                            Image(systemName: item.symbol).font(.caption)
-                                .frame(width: 22, height: 22)
-                                .background(state.color(of: name).opacity(profile.icon == item.symbol ? 0.3 : 0.0), in: .rect(cornerRadius: 6))
-                        }
-                        .buttonStyle(.plain)
-                        .help(item.label)
-                    }
+                    IconChoices(selected: profile.icon, tint: state.color(of: name)) { state.setIcon($0, of: name) }
                 }
                 Text("\(profile.preferences.count) settings · \(packages) packages · \(profile.dock?.count ?? 0) Dock items")
                     .font(.caption).foregroundStyle(.secondary)
@@ -120,10 +208,6 @@ struct ProfileRow: View {
                       : "\(needed.map(\.capitalized).joined(separator: ", ")) builds on it")
         }
         .padding(.vertical, 2)
-    }
-
-    private func isCurrent(_ c: ProfileColor) -> Bool {
-        state.color(of: name) == c.color
     }
 
     /// Other profiles this one may build on (no loops).
