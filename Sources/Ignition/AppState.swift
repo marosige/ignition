@@ -114,6 +114,20 @@ final class AppState: ObservableObject {
     var viewLayers: [String] { resolve(device.activeProfiles + [device.editingProfile]) }
     var editingIsActive: Bool { layers.contains(device.editingProfile) }
     var activeProfiles: [Profile] { layers.compactMap { profiles[$0] } }
+    /// The colour of a profile: its own choice, else one picked by position.
+    func color(of name: String) -> Color {
+        if let raw = profiles[name]?.color, let chosen = ProfileColor(rawValue: raw) { return chosen.color }
+        let index = profileNames.firstIndex(of: name) ?? 0
+        return ProfileColor.allCases[index % ProfileColor.allCases.count].color
+    }
+
+    func setColor(_ color: ProfileColor, of name: String) {
+        guard var p = profiles[name] else { return }
+        p.color = color.rawValue
+        profiles[name] = p
+        persist(name)
+    }
+
     /// What gets applied to this Mac.
     var effective: Profile { Profile.merged(activeProfiles) }
     /// What the settings pages show (includes a profile that is only being edited).
@@ -202,7 +216,7 @@ final class AppState: ObservableObject {
 
     /// What the control should show: profile value, else the Mac's current value, else macOS's default.
     func value(for def: PreferenceDef) -> PrefValue? {
-        viewEffective.preferences[def.id] ?? live[def.id] ?? def.osDefault
+        editing.preferences[def.id] ?? viewEffective.preferences[def.id] ?? live[def.id] ?? def.osDefault
     }
 
     func isManaged(_ def: PreferenceDef) -> Bool {

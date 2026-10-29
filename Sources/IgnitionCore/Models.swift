@@ -190,11 +190,13 @@ public struct Profile: Codable, Equatable {
     public var manualNotes: [String: String] = [:]
     /// Name of the profile this one builds on (it is switched on together with it).
     public var extends: String?
+    /// Colour name used for this profile's pills and icon (see ProfileColor in the app).
+    public var color: String?
 
     public init(title: String = "") { self.title = title }
 
     enum CodingKeys: String, CodingKey {
-        case title, preferences, dock, finderSidebar, directories, packages, startup, copyFiles, manualNotes, extends
+        case title, preferences, dock, finderSidebar, directories, packages, startup, copyFiles, manualNotes, extends, color
     }
 
     public init(from decoder: Decoder) throws {
@@ -209,6 +211,7 @@ public struct Profile: Codable, Equatable {
         copyFiles = try c.decodeIfPresent([String].self, forKey: .copyFiles) ?? []
         manualNotes = try c.decodeIfPresent([String: String].self, forKey: .manualNotes) ?? [:]
         extends = try c.decodeIfPresent(String.self, forKey: .extends)
+        color = try c.decodeIfPresent(String.self, forKey: .color)
     }
 
     /// Layers profiles in order; later ones win.

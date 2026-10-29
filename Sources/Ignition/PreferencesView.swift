@@ -39,38 +39,31 @@ struct PreferenceRow: View {
     var body: some View {
         let origins = state.origins(for: def)
         HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(def.title)
+                    Text(def.title).layoutPriority(1)
                     if def.scope == .system {
                         Image(systemName: "lock").font(.caption).foregroundStyle(.secondary)
                             .help("Needs administrator rights")
                     }
+                    DefaultPill(def: def, origins: origins)
+                    OriginPills(def: def, origins: origins)
+                    notInProfile(origins)
                 }
                 if let detail = def.detail {
                     Text(detail).font(.caption).foregroundStyle(.secondary)
                 }
-                metaLine(origins)
             }
             Spacer(minLength: 12)
             control
         }
     }
 
-    /// Where the value comes from, and the way back to the macOS default.
     @ViewBuilder
-    private func metaLine(_ origins: [PrefOrigin]) -> some View {
-        let notInProfile = origins.isEmpty && state.editingIsActive
-            && def.osDefault != nil && state.value(for: def) != def.osDefault
-        if !origins.isEmpty || notInProfile {
-            HStack(spacing: 6) {
-                OriginPills(def: def, origins: origins)
-                if notInProfile {
-                    Text("Not in profile").font(.caption2.weight(.semibold)).foregroundStyle(.orange)
-                    addToProfile
-                }
-                DefaultPill(def: def, origins: origins)
-            }
+    private func notInProfile(_ origins: [PrefOrigin]) -> some View {
+        if origins.isEmpty, state.editingIsActive, def.osDefault != nil, state.value(for: def) != def.osDefault {
+            Text("Not in profile").font(.caption2.weight(.semibold)).foregroundStyle(.orange)
+            addToProfile
         }
     }
 
@@ -138,37 +131,51 @@ struct PreferenceRow: View {
     }
 }
 
-/// "Saved · Base", or one pill per profile (with its value) when several layers set it.
+/// One pill per profile that sets the value, in the profile's colour, with its value inside.
 struct OriginPills: View {
     @EnvironmentObject var state: AppState
     let def: PreferenceDef
     let origins: [PrefOrigin]
 
     var body: some View {
-        let multiple = origins.count > 1
         ForEach(Array(origins.enumerated()), id: \.element.id) { index, origin in
             let winner = index == origins.count - 1
-            pill(
-                multiple ? "\(origin.profile.capitalized): \(state.formatted(def, origin.value))" : (state.profileNames.count > 1 ? origin.profile.capitalized : "Saved"),
-                color: winner ? .accentColor : .secondary,
-                strike: multiple && !winner)
-                .help(multiple
-                      ? (winner ? "\(origin.profile.capitalized) wins on this Mac" : "Overridden by \(origins.last!.profile.capitalized)")
-                      : "Stored in the \(origin.profile.capitalized) profile")
+            let editing = origin.profile == state.device.editingProfile
+            let color = state.color(of: origin.profile)
+            HStack(spacing: 4) {
+                Text(label(origin.profile))
+                Text("·").opacity(0.6)
+                Text(state.formatted(def, origin.value))
+            }
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 7).padding(.vertical, 2)
+            .background(color.opacity(winner ? 0.22 : 0.10), in: .capsule)
+            .overlay(Capsule().stroke(color.opacity(editing ? 0.9 : 0), lineWidth: 1))
+            .foregroundStyle(color.opacity(winner ? 1 : 0.6))
+            .help(helpText(origin, winner: winner, editing: editing))
         }
         if origins.contains(where: \.unsaved) {
-            pill("Not saved to GitHub", color: .orange, strike: false)
-                .help("This change only exists on this Mac. Use Save to GitHub.")
+            HStack(spacing: 3) {
+                Image(systemName: "icloud.and.arrow.up")
+                Text("Unsaved")
+            }
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 7).padding(.vertical, 2)
+            .background(Color.orange.opacity(0.18), in: .capsule)
+            .foregroundStyle(.orange)
+            .help("This change only exists on this Mac. Use Save to GitHub.")
         }
     }
 
-    private func pill(_ text: String, color: Color, strike: Bool) -> some View {
-        Text(text)
-            .font(.caption2.weight(.semibold))
-            .strikethrough(strike)
-            .padding(.horizontal, 6).padding(.vertical, 1)
-            .background(color.opacity(0.18), in: .capsule)
-            .foregroundStyle(color)
+    private func label(_ name: String) -> String {
+        state.profileNames.count > 1 ? name.capitalized : "Saved"
+    }
+
+    private func helpText(_ origin: PrefOrigin, winner: Bool, editing: Bool) -> String {
+        var text = "Stored in the \(origin.profile.capitalized) profile"
+        if !winner, let top = origins.last { text += " – overridden by \(top.profile.capitalized)" }
+        if editing { text += " (the one you are editing)" }
+        return text
     }
 }
 
@@ -184,11 +191,11 @@ struct DefaultPill: View {
         let inEditing = state.isManagedByEditing(def)
         let differs = def.osDefault != nil && current != def.osDefault
         let canReset = inEditing || (origins.isEmpty && differs && state.editingIsActive)
-        if differs || inEditing {
+        if def.osDefault != nil || inEditing {
             Button { asking = true } label: {
                 HStack(spacing: 3) {
                     Image(systemName: "apple.logo")
-                    Text(differs ? state.defaultText(def) : "Default")
+                    Text(state.defaultText(def))
                     if canReset { Image(systemName: "arrow.counterclockwise").font(.system(size: 8, weight: .bold)) }
                 }
                 .font(.caption2.weight(.medium))

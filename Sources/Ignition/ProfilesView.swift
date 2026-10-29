@@ -45,8 +45,8 @@ struct ProfileRow: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
-                    Text(name.capitalized).font(.headline)
-                    if state.device.editingProfile == name { pill("Editing", .accentColor) }
+                    Text(name.capitalized).font(.headline).foregroundStyle(state.color(of: name))
+                    if state.device.editingProfile == name { pill("Editing", state.color(of: name)) }
                     if !on { pill("Not on this Mac", .secondary) }
                 }
                 HStack(spacing: 6) {
@@ -61,6 +61,17 @@ struct ProfileRow: View {
                     .pickerStyle(.menu)
                     .controlSize(.small)
                     .fixedSize()
+                }
+                HStack(spacing: 5) {
+                    Text("Colour").font(.caption).foregroundStyle(.secondary)
+                    ForEach(ProfileColor.allCases) { c in
+                        Button { state.setColor(c, of: name) } label: {
+                            Circle().fill(c.color).frame(width: 14, height: 14)
+                                .overlay(Circle().stroke(Color.primary.opacity(isCurrent(c) ? 0.8 : 0), lineWidth: 2))
+                        }
+                        .buttonStyle(.plain)
+                        .help(c.rawValue.capitalized)
+                    }
                 }
                 Text("\(profile.preferences.count) settings · \(packages) packages · \(profile.dock?.count ?? 0) Dock items")
                     .font(.caption).foregroundStyle(.secondary)
@@ -87,6 +98,10 @@ struct ProfileRow: View {
                       : "\(needed.map(\.capitalized).joined(separator: ", ")) builds on it")
         }
         .padding(.vertical, 2)
+    }
+
+    private func isCurrent(_ c: ProfileColor) -> Bool {
+        state.color(of: name) == c.color
     }
 
     /// Other profiles this one may build on (no loops).
