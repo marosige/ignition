@@ -190,7 +190,7 @@ struct DeviceCard: View {
                         Text(hardware.osVersion).font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                HStack(spacing: 5) {
+                VStack(alignment: .leading, spacing: 4) {
                     ForEach(state.layers, id: \.self) { name in
                         ProfileChip(name: name, showName: true)
                             .help("\(name.capitalized) is configured on this Mac")
