@@ -51,7 +51,7 @@ struct PreferencesView: View {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(plannedCount) of \(defs.count) in a profile").font(.headline)
-                        Text("Add a setting to a profile with any value you like. Click a profile pill to change its value or remove it.")
+                        Text("The controls change this Mac right away, like System Settings. “Add” saves the value to a profile; click a profile pill to edit the saved value.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -88,6 +88,7 @@ struct PreferenceRow: View {
     var body: some View {
         let origins = state.origins(for: def)
         let owner = state.controlOrigin(for: def)
+        let live = state.liveValue(def)
         HStack(alignment: .center, spacing: 10) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(owner.map { state.color(of: $0.profile) } ?? Color.clear)
@@ -95,28 +96,26 @@ struct PreferenceRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(def.title).layoutPriority(1)
-                        .foregroundStyle(owner == nil ? Color.secondary : Color.primary)
                     if def.scope == .system {
                         Image(systemName: "lock").font(.caption).foregroundStyle(.secondary)
                             .help("Needs administrator rights")
                     }
-                    if owner != nil {
+                    if def.osDefault != nil, live != def.osDefault || owner != nil {
                         DefaultPill(def: def, origins: origins)
-                        OriginPills(def: def, origins: origins)
-                        AddToOtherProfile(def: def, value: owner?.value ?? state.initialValue(def))
-                        LivePill(def: def)
+                    }
+                    OriginPills(def: def, origins: origins)
+                    if owner != nil {
+                        SaveToProfileMenu(def: def, value: live, pill: true)
                     }
                 }
                 if let detail = def.detail {
                     Text(detail).font(.caption).foregroundStyle(.secondary)
                 }
-                if owner == nil { unplannedHint }
             }
             Spacer(minLength: 12)
-            if let owner {
-                PrefValueControl(def: def, value: owner.value) { state.set(def, to: $0, in: owner.profile) }
-            } else {
-                AddSettingMenu(def: def, value: state.initialValue(def))
+            HStack(spacing: 10) {
+                PrefValueControl(def: def, value: live) { state.applyLive(def, $0) }
+                if owner == nil { SaveToProfileMenu(def: def, value: live, pill: false) }
             }
         }
         .padding(.vertical, 3)
@@ -126,30 +125,6 @@ struct PreferenceRow: View {
                 .fill(Color.accentColor.opacity(state.focusPref == def.id ? 0.22 : 0))
         )
         .animation(.easeInOut(duration: 0.4), value: state.focusPref)
-    }
-
-    /// The macOS default and, when different, what this Mac has now.
-    @ViewBuilder
-    private var unplannedHint: some View {
-        HStack(spacing: 8) {
-            if def.osDefault != nil {
-                HStack(spacing: 3) {
-                    Image(systemName: "apple.logo")
-                    Text(state.defaultText(def))
-                }
-                .help("macOS default")
-            }
-            if let live = state.live[def.id], live != def.osDefault {
-                HStack(spacing: 3) {
-                    Image(systemName: "laptopcomputer")
-                    Text(state.formatted(def, live))
-                }
-                .foregroundStyle(.orange)
-                .help("This Mac currently has this value")
-            }
-        }
-        .font(.caption2.weight(.medium))
-        .foregroundStyle(.secondary)
     }
 }
 
@@ -219,64 +194,44 @@ struct CommitTextField: View {
 
 // MARK: - Adding
 
-/// "Add" for a setting that is in no profile: asks which one, like getting an app.
-struct AddSettingMenu: View {
+/// Saves this Mac's value into a profile: "Add" the first time, a "+" pill afterwards (saving again updates it).
+struct SaveToProfileMenu: View {
     @EnvironmentObject var state: AppState
     let def: PreferenceDef
     let value: PrefValue
+    let pill: Bool
 
     var body: some View {
+        let have = state.origins(for: def).map(\.profile)
         Menu {
-            Section("Add to profile") {
+            Section(pill ? "Save this Mac's value to" : "Add to profile") {
                 ForEach(state.profileNames, id: \.self) { name in
                     Button {
                         state.set(def, to: value, in: name)
                     } label: {
-                        Label(state.layers.contains(name) ? name.capitalized : "\(name.capitalized) (not on this Mac)",
-                              systemImage: state.icon(of: name) ?? "square.stack.3d.up")
+                        let suffix = have.contains(name) ? " – update" : (state.layers.contains(name) ? "" : " (not on this Mac)")
+                        Label(name.capitalized + suffix, systemImage: state.icon(of: name) ?? "square.stack.3d.up")
                     }
                 }
             }
         } label: {
-            Label("Add", systemImage: "plus")
+            if pill {
+                Image(systemName: "plus")
+                    .font(.system(size: 9, weight: .bold))
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Color.secondary.opacity(0.15), in: .capsule)
+                    .overlay(Capsule().strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
+                    .foregroundStyle(.secondary)
+            } else {
+                Label("Add", systemImage: "plus")
+            }
         }
         .menuStyle(.button)
-        .buttonStyle(.glass)
+        .buttonStyle(pill ? .plain : .glass)
+        .menuIndicator(.hidden)
         .controlSize(.small)
         .fixedSize()
-        .help("Add to a profile with \(state.formatted(def, value))")
-    }
-}
-
-/// "+" pill after the profile pills: the same setting in another profile.
-struct AddToOtherProfile: View {
-    @EnvironmentObject var state: AppState
-    let def: PreferenceDef
-    let value: PrefValue
-
-    var body: some View {
-        let targets = state.profilesToAdd(def)
-        Menu {
-            ForEach(targets, id: \.self) { name in
-                Button {
-                    state.set(def, to: value, in: name)
-                } label: {
-                    Label(state.layers.contains(name) ? name.capitalized : "\(name.capitalized) (not on this Mac)",
-                          systemImage: state.icon(of: name) ?? "square.stack.3d.up")
-                }
-            }
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 9, weight: .bold))
-                .padding(.horizontal, 8).padding(.vertical, 3)
-                .background(Color.secondary.opacity(0.15), in: .capsule)
-                .overlay(Capsule().strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
-                .foregroundStyle(.secondary)
-        }
-        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
-        .disabled(targets.isEmpty)
-        .opacity(targets.isEmpty ? 0.4 : 1)
-        .help(targets.isEmpty ? "Every profile already has it, directly or through a profile it builds on" : "Add to another profile")
+        .help("Save \(state.formatted(def, value)) (this Mac now) into a profile")
     }
 }
 
@@ -364,6 +319,12 @@ struct OriginPill: View {
                 }
                 .font(.caption).foregroundStyle(.secondary)
             }
+            Button {
+                state.set(def, to: state.liveValue(def) ?? current, in: origin.profile)
+            } label: {
+                Label("Use this Mac's value (\(state.formatted(def, state.liveValue(def))))", systemImage: "laptopcomputer")
+            }
+            .buttonStyle(.glass)
             Divider()
             HStack {
                 Button("Remove from \(origin.profile.capitalized)", role: .destructive) {
@@ -376,26 +337,6 @@ struct OriginPill: View {
         }
         .padding(16)
         .frame(width: 340)
-    }
-}
-
-/// What this Mac has right now, when that is not what the plan says. Apply fixes it.
-struct LivePill: View {
-    @EnvironmentObject var state: AppState
-    let def: PreferenceDef
-
-    var body: some View {
-        if let planned = state.effective.preferences[def.id], state.liveValue(def) != planned {
-            HStack(spacing: 3) {
-                Image(systemName: "laptopcomputer")
-                Text(state.formatted(def, state.liveValue(def)))
-            }
-            .font(.caption2.weight(.medium))
-            .padding(.horizontal, 7).padding(.vertical, 2)
-            .background(Color.orange.opacity(0.18), in: .capsule)
-            .foregroundStyle(.orange)
-            .help("This Mac has \(state.formatted(def, state.liveValue(def))) right now. Apply sets it to \(state.formatted(def, planned)).")
-        }
     }
 }
 
@@ -419,7 +360,7 @@ struct DefaultPill: View {
                 .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("macOS default – click to reset")
+            .help("macOS default – click to reset this Mac or the profiles")
             .popover(isPresented: $asking, arrowEdge: .bottom) { confirm }
         }
     }
@@ -428,15 +369,29 @@ struct DefaultPill: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Reset “\(def.title)” to the macOS default?").font(.headline)
             Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 4) {
-                GridRow { Text("Now").foregroundStyle(.secondary); Text(state.formatted(def, state.value(for: def))).bold() }
-                GridRow { Text("After").foregroundStyle(.secondary); Text(state.defaultText(def)).bold() }
+                GridRow { Text("This Mac").foregroundStyle(.secondary); Text(state.formatted(def, state.liveValue(def))).bold() }
+                GridRow { Text("Default").foregroundStyle(.secondary); Text(state.defaultText(def)).bold() }
+                if !origins.isEmpty {
+                    GridRow {
+                        Text("Profiles").foregroundStyle(.secondary)
+                        Text(origins.map { "\($0.profile.capitalized): \(state.formatted(def, $0.value))" }.joined(separator: ", ")).bold()
+                    }
+                }
             }
-            Text("It is removed from \(origins.map { $0.profile.capitalized }.joined(separator: ", ")). This Mac changes when you Apply.")
-                .font(.caption).foregroundStyle(.secondary)
             HStack {
-                Spacer()
                 Button("Cancel") { asking = false }
-                Button("Reset") { state.reset(def); asking = false }.buttonStyle(.glassProminent)
+                Spacer()
+                if !origins.isEmpty {
+                    Button("Remove from profiles") { state.reset(def); asking = false }
+                }
+                if let value = def.osDefault {
+                    Button("Set this Mac to default") {
+                        state.applyLive(def, value)
+                        if !origins.isEmpty { state.reset(def) }
+                        asking = false
+                    }
+                    .buttonStyle(.glassProminent)
+                }
             }
         }
         .padding(16)

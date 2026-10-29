@@ -366,6 +366,14 @@ final class AppState: ObservableObject {
         persist(name)
     }
 
+    /// Changes the Mac itself, right now (like System Settings). Profiles are not touched.
+    func applyLive(_ def: PreferenceDef, _ value: PrefValue) {
+        let r = DefaultsService.write(def, value)
+        if !r.ok { errorMessage = "\(def.title): \(r.combined.isEmpty ? "failed" : r.combined)"; return }
+        live[def.id] = value
+        scheduleRestart(def.restart)
+    }
+
     /// Takes the setting out of every profile (the plan goes back to the macOS default).
     func reset(_ def: PreferenceDef) {
         for name in profileNames where profiles[name]?.preferences[def.id] != nil { remove(def, from: name) }
