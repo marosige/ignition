@@ -48,9 +48,6 @@ struct ContentView: View {
                     DetailRouter(destination: state.destination ?? .overview)
                 }
             }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                if !state.editingIsActive { InactiveProfileBanner() }
-            }
         }
         .toolbar {
             ToolbarItemGroup(placement: .navigation) {
@@ -59,7 +56,6 @@ struct ContentView: View {
                 Button { state.goForward() } label: { Label("Forward", systemImage: "chevron.right") }
                     .disabled(!state.canGoForward)
             }
-            ToolbarItem(placement: .automatic) { ProfileMenu() }
             ToolbarItem(placement: .automatic) { ApplyButton() }
             ToolbarItem(placement: .automatic) { SyncButton() }
         }
@@ -196,29 +192,18 @@ struct DeviceCard: View {
                             .font(.headline)
                             .lineLimit(3)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text("\(hardware.chip) · \(hardware.memoryGB) GB")
+                        Text("\(hardware.model) · \(hardware.chip) · \(hardware.memoryGB) GB")
                             .font(.caption).foregroundStyle(.secondary)
                             .lineLimit(1).truncationMode(.tail)
                         Text(hardware.osVersion).font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                VStack(alignment: .leading, spacing: 4) {
-                    Label {
-                        Text(state.layers.map(\.capitalized).joined(separator: " + "))
-                            .fixedSize(horizontal: false, vertical: true)
-                    } icon: { Image(systemName: "square.stack.3d.up") }
-                        .help("Profiles switched on for this Mac")
-                    Label {
-                        Text(state.editingIsActive
-                             ? "Editing \(state.device.editingProfile.capitalized)"
-                             : "Editing \(state.device.editingProfile.capitalized) (not on this Mac)")
-                            .fixedSize(horizontal: false, vertical: true)
-                    } icon: { Image(systemName: state.icon(of: state.device.editingProfile) ?? "pencil") }
-                        .foregroundStyle(state.editingIsActive ? Color.secondary : Color.orange)
-                        .help("Changes you make are saved into this profile")
+                HStack(spacing: 5) {
+                    ForEach(state.layers, id: \.self) { name in
+                        ProfileChip(name: name, showName: true)
+                            .help("\(name.capitalized) is configured on this Mac")
+                    }
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
@@ -231,33 +216,6 @@ struct DeviceCard: View {
 
 // MARK: - Toolbar
 
-struct ProfileMenu: View {
-    @EnvironmentObject var state: AppState
-
-    var body: some View {
-        Menu {
-            Picker("Changes are saved into", selection: $state.device.editingProfile) {
-                ForEach(state.profileNames, id: \.self) { name in
-                    Text(state.layers.contains(name) ? name.capitalized : "\(name.capitalized) (not on this Mac)").tag(name)
-                }
-            }
-            .pickerStyle(.inline)
-            Divider()
-            Button("Manage Profiles…") { state.navigate(to: .profiles) }
-        } label: {
-            HStack(spacing: 7) {
-                Image(systemName: state.icon(of: state.device.editingProfile) ?? "square.stack.3d.up")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 22, height: 22)
-                    .background(state.profileColor(of: state.device.editingProfile).solid, in: .circle)
-                Text(state.device.editingProfile.capitalized)
-            }
-        }
-        .help("The profile your changes are saved into")
-        .onChange(of: state.device.editingProfile) { _, _ in state.saveDevice() }
-    }
-}
 
 struct ApplyButton: View {
     @EnvironmentObject var state: AppState
@@ -345,24 +303,3 @@ extension SyncKind {
     }
 }
 
-/// Shown while editing a profile that is not switched on for this Mac.
-struct InactiveProfileBanner: View {
-    @EnvironmentObject var state: AppState
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "pencil.and.list.clipboard")
-            Text("Editing **\(state.device.editingProfile.capitalized)**, which is not on this Mac. Changes are saved to the profile only; this Mac stays as it is.")
-                .font(.callout)
-            Spacer()
-            Button("Back to \((state.layers.last ?? "base").capitalized)") {
-                state.device.editingProfile = state.layers.last ?? "base"
-                state.saveDevice()
-            }
-            .buttonStyle(.glass)
-        }
-        .padding(.horizontal, 14).padding(.vertical, 8)
-        .glassEffect(.regular.tint(.orange.opacity(0.2)), in: .rect(cornerRadius: 14))
-        .padding(.horizontal, 12).padding(.top, 6)
-    }
-}

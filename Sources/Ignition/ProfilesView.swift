@@ -15,7 +15,7 @@ struct ProfilesView: View {
             } header: {
                 Text("Profiles")
             } footer: {
-                Text("A profile can build on another one: Work building on Base starts from everything in Base and adds or overrides things. Switching a profile on switches on what it builds on. “Edit” lets you change any profile, even one that is not on this Mac – nothing is applied here until it is switched on.")
+                Text("A profile can build on another one: Work building on Base starts from everything in Base and adds or overrides things. Switching a profile on switches on what it builds on. Settings and software let you add things to any profile, even one that is not on this Mac – nothing is applied here until it is switched on.")
             }
         }
         .formStyle(.grouped)
@@ -159,7 +159,6 @@ struct ProfileRow: View {
                         Image(systemName: icon).foregroundStyle(state.color(of: name))
                     }
                     Text(name.capitalized).font(.headline).foregroundStyle(state.color(of: name))
-                    if state.device.editingProfile == name { pill("Editing", state.color(of: name)) }
                     if !on { pill("Not on this Mac", .secondary) }
                 }
                 HStack(spacing: 6) {
@@ -187,12 +186,6 @@ struct ProfileRow: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Button(state.device.editingProfile == name ? "Editing" : "Edit") {
-                state.device.editingProfile = name
-                state.saveDevice()
-            }
-            .buttonStyle(.glass)
-            .disabled(state.device.editingProfile == name)
             Button(role: .destructive) { askDelete() } label: { Image(systemName: "trash") }
                 .buttonStyle(.borderless)
                 .opacity(name == "base" ? 0 : 1)

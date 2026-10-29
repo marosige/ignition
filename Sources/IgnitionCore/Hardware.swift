@@ -3,6 +3,7 @@ import IOKit.ps
 
 /// A few facts about this Mac for the device card.
 public struct HardwareInfo {
+    public let model: String
     public let chip: String
     public let memoryGB: Int
     public let osVersion: String
@@ -26,6 +27,7 @@ public struct HardwareInfo {
         let list = IOPSCopyPowerSourcesList(sources).takeRetainedValue() as [CFTypeRef]
         let battery = !list.isEmpty
         return HardwareInfo(
+            model: sysctlString("hw.model") ?? "Mac",
             chip: sysctlString("machdep.cpu.brand_string") ?? "Mac",
             memoryGB: Int(ProcessInfo.processInfo.physicalMemory / 1_073_741_824),
             osVersion: os,

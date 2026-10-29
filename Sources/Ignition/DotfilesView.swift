@@ -10,6 +10,7 @@ struct DotfilesView: View {
 
     var body: some View {
         List {
+            Section { ProfileTargetPicker() }
             Section {
                 if entries.isEmpty {
                     Text("No dotfiles tracked yet. Add one from the suggestions below or pick any file in your home folder.")
@@ -67,7 +68,6 @@ struct DotfilesView: View {
                     }
                 } label: { Label("Link All", systemImage: "link") }
                 .buttonStyle(.glassProminent)
-                .disabled(!state.editingIsActive)
             }
         }
         .onAppear(perform: reload)

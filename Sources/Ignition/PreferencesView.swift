@@ -2,27 +2,26 @@ import SwiftUI
 import AppKit
 import IgnitionCore
 
-/// A catalogue of what a profile can set: planned settings carry their control, the rest
-/// are one tap away ("Add"), like getting an app into a profile.
+/// A catalogue of what profiles can set. A setting that is in a profile carries its value
+/// (change it right here, or per profile through its pill); the rest are one tap from a profile.
 struct PreferencesView: View {
     @EnvironmentObject var state: AppState
     let category: PrefCategory
     @State private var filter: Filter = .all
 
     enum Filter: String, CaseIterable, Identifiable {
-        case all = "All", planned = "In plan", open = "Not in plan"
+        case all = "All", planned = "In a profile", open = "Not in a profile"
         var id: String { rawValue }
     }
 
     private var defs: [PreferenceDef] { PreferenceCatalog.defs(in: category) }
-    private var plannedCount: Int { defs.filter { state.plannedValue(for: $0) != nil }.count }
+    private var plannedCount: Int { defs.filter { state.isPlanned($0) }.count }
 
     private func visible(_ def: PreferenceDef) -> Bool {
-        let planned = state.plannedValue(for: def) != nil
         switch filter {
         case .all: return true
-        case .planned: return planned
-        case .open: return !planned
+        case .planned: return state.isPlanned(def)
+        case .open: return !state.isPlanned(def)
         }
     }
 
@@ -51,15 +50,15 @@ struct PreferencesView: View {
             Section {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("\(plannedCount) of \(defs.count) in the plan").font(.headline)
-                        Text("Settings you add are saved into \(state.device.editingProfile.capitalized) and applied to every Mac that uses it.")
+                        Text("\(plannedCount) of \(defs.count) in a profile").font(.headline)
+                        Text("Add a setting to a profile with any value you like. Click a profile pill to change its value or remove it.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
                     Picker("", selection: $filter) {
                         ForEach(Filter.allCases) { Text($0.rawValue).tag($0) }
                     }
-                    .pickerStyle(.segmented).labelsHidden().frame(width: 260)
+                    .pickerStyle(.segmented).labelsHidden().frame(width: 300)
                 }
             }
             ForEach(PreferenceCatalog.sections(in: category)) { section in
@@ -73,12 +72,6 @@ struct PreferencesView: View {
             ForEach(ManualSettings.items(in: category)) { item in
                 ManualSettingSection(item: item)
             }
-            Section {
-                Button("Remove all \(category.title) settings from \(state.device.editingProfile.capitalized)", role: .destructive) {
-                    for def in defs where state.isManagedByEditing(def) { state.reset(def) }
-                }
-                .disabled(!defs.contains { state.isManagedByEditing($0) })
-            }
         }
         .formStyle(.grouped)
         .navigationTitle(category.title)
@@ -86,38 +79,52 @@ struct PreferencesView: View {
     }
 }
 
+// MARK: - Row
+
 struct PreferenceRow: View {
     @EnvironmentObject var state: AppState
     let def: PreferenceDef
+    /// Value to add when the setting is not in any profile yet.
+    @State private var draft: PrefValue?
 
     var body: some View {
-        let planned = state.plannedValue(for: def) != nil
         let origins = state.origins(for: def)
+        let owner = state.controlOrigin(for: def)
         HStack(alignment: .center, spacing: 10) {
             RoundedRectangle(cornerRadius: 2)
-                .fill(planned ? state.color(of: state.device.editingProfile) : Color.clear)
+                .fill(owner.map { state.color(of: $0.profile) } ?? Color.clear)
                 .frame(width: 3, height: 30)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(def.title).layoutPriority(1)
-                        .foregroundStyle(planned ? Color.primary : Color.secondary)
+                        .foregroundStyle(owner == nil ? Color.secondary : Color.primary)
                     if def.scope == .system {
                         Image(systemName: "lock").font(.caption).foregroundStyle(.secondary)
                             .help("Needs administrator rights")
                     }
-                    if planned {
+                    if owner != nil {
                         DefaultPill(def: def, origins: origins)
                         OriginPills(def: def, origins: origins)
+                        AddToOtherProfile(def: def, value: owner?.value ?? state.initialValue(def))
                         LivePill(def: def)
                     }
                 }
                 if let detail = def.detail {
                     Text(detail).font(.caption).foregroundStyle(.secondary)
                 }
-                if !planned { unplannedHint }
+                if owner == nil { unplannedHint }
             }
             Spacer(minLength: 12)
-            if planned { control } else { addButton }
+            if let owner {
+                PrefValueControl(def: def, value: owner.value) { state.set(def, to: $0, in: owner.profile) }
+            } else {
+                let value = draft ?? state.initialValue(def)
+                HStack(spacing: 10) {
+                    PrefValueControl(def: def, value: value) { draft = $0 }
+                        .opacity(0.8)
+                    AddSettingMenu(def: def, value: value)
+                }
+            }
         }
         .padding(.vertical, 3)
         .padding(.horizontal, 6)
@@ -128,7 +135,7 @@ struct PreferenceRow: View {
         .animation(.easeInOut(duration: 0.4), value: state.focusPref)
     }
 
-    /// What the Mac would get from the default, and what it has now.
+    /// The macOS default and, when different, what this Mac has now.
     @ViewBuilder
     private var unplannedHint: some View {
         HStack(spacing: 8) {
@@ -137,8 +144,9 @@ struct PreferenceRow: View {
                     Image(systemName: "apple.logo")
                     Text(state.defaultText(def))
                 }
+                .help("macOS default")
             }
-            if state.editingIsActive, let live = state.live[def.id], live != def.osDefault {
+            if let live = state.live[def.id], live != def.osDefault {
                 HStack(spacing: 3) {
                     Image(systemName: "laptopcomputer")
                     Text(state.formatted(def, live))
@@ -150,66 +158,139 @@ struct PreferenceRow: View {
         .font(.caption2.weight(.medium))
         .foregroundStyle(.secondary)
     }
+}
 
-    private var addButton: some View {
-        let start = state.initialValue(def)
-        return Button { state.set(def, to: start) } label: {
-            Label("Add", systemImage: "plus")
-        }
-        .buttonStyle(.glass)
-        .controlSize(.small)
-        .help("Add to \(state.device.editingProfile.capitalized), starting with \(state.formatted(def, start))")
-    }
+// MARK: - Control
 
-    @ViewBuilder
-    private var control: some View {
-        let current = state.value(for: def)
+/// The right control for a setting; reports changes, stores nothing itself.
+struct PrefValueControl: View {
+    @EnvironmentObject var state: AppState
+    let def: PreferenceDef
+    let value: PrefValue?
+    let onChange: (PrefValue) -> Void
+
+    var body: some View {
         switch def.control {
         case .toggle:
-            Toggle("", isOn: Binding(
-                get: { current?.boolValue ?? false },
-                set: { state.set(def, to: .bool($0)) }))
+            Toggle("", isOn: Binding(get: { value?.boolValue ?? false }, set: { onChange(.bool($0)) }))
                 .labelsHidden()
                 .toggleStyle(.switch)
-                .help("macOS default: \(state.defaultText(def))")
         case .slider(let range, let step, _):
             HStack(spacing: 6) {
-                Text(state.formatted(def, current))
+                Text(state.formatted(def, value))
                     .monospacedDigit()
                     .frame(minWidth: 70, alignment: .trailing)
                 Stepper("", value: Binding(
-                    get: { current?.doubleValue ?? range.lowerBound },
+                    get: { value?.doubleValue ?? range.lowerBound },
                     set: { v in
-                        if case .double? = def.osDefault { state.set(def, to: .double((v * 10).rounded() / 10)) }
-                        else { state.set(def, to: .int(Int(v.rounded()))) }
+                        if case .double? = def.osDefault { onChange(.double((v * 10).rounded() / 10)) }
+                        else { onChange(.int(Int(v.rounded()))) }
                     }), in: range, step: step)
                     .labelsHidden()
             }
-            .help("macOS default: \(state.defaultText(def))")
         case .picker(let options):
             Picker("", selection: Binding(
-                get: { current ?? options.first?.value ?? .int(0) },
-                set: { state.set(def, to: $0) })) {
-                if let current, !options.contains(where: { $0.value == current }) {
-                    Text(current.description).tag(current)
+                get: { value ?? options.first?.value ?? .int(0) },
+                set: { onChange($0) })) {
+                if let value, !options.contains(where: { $0.value == value }) {
+                    Text(value.description).tag(value)
                 }
                 ForEach(options, id: \.self) { Text($0.label).tag($0.value) }
             }
             .labelsHidden()
             .pickerStyle(.menu)
             .fixedSize()
-            .help("macOS default: \(state.defaultText(def))")
         case .text(let placeholder):
-            CommitTextField(placeholder: placeholder, initial: current?.stringValue ?? "") {
-                state.set(def, to: .string($0))
-            }
-            .help("macOS default: \(state.defaultText(def))")
+            CommitTextField(placeholder: placeholder, initial: value?.stringValue ?? "") { onChange(.string($0)) }
         }
     }
 }
 
+/// Text field that only reports when the user presses return.
+struct CommitTextField: View {
+    let placeholder: String
+    let initial: String
+    let commit: (String) -> Void
+    @State private var text = ""
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .labelsHidden()
+            .textFieldStyle(.roundedBorder)
+            .frame(width: 200)
+            .onSubmit { commit(text) }
+            .onAppear { text = initial }
+            .onChange(of: initial) { _, new in text = new }
+    }
+}
+
+// MARK: - Adding
+
+/// "Add" for a setting that is in no profile: asks which one, like getting an app.
+struct AddSettingMenu: View {
+    @EnvironmentObject var state: AppState
+    let def: PreferenceDef
+    let value: PrefValue
+
+    var body: some View {
+        Menu {
+            Section("Add to profile") {
+                ForEach(state.profileNames, id: \.self) { name in
+                    Button {
+                        state.set(def, to: value, in: name)
+                    } label: {
+                        Label(state.layers.contains(name) ? name.capitalized : "\(name.capitalized) (not on this Mac)",
+                              systemImage: state.icon(of: name) ?? "square.stack.3d.up")
+                    }
+                }
+            }
+        } label: {
+            Label("Add", systemImage: "plus")
+        }
+        .menuStyle(.button)
+        .buttonStyle(.glass)
+        .controlSize(.small)
+        .fixedSize()
+        .help("Add to a profile with \(state.formatted(def, value))")
+    }
+}
+
+/// "+" pill after the profile pills: the same setting in another profile.
+struct AddToOtherProfile: View {
+    @EnvironmentObject var state: AppState
+    let def: PreferenceDef
+    let value: PrefValue
+
+    var body: some View {
+        let targets = state.profilesToAdd(def)
+        Menu {
+            ForEach(targets, id: \.self) { name in
+                Button {
+                    state.set(def, to: value, in: name)
+                } label: {
+                    Label(state.layers.contains(name) ? name.capitalized : "\(name.capitalized) (not on this Mac)",
+                          systemImage: state.icon(of: name) ?? "square.stack.3d.up")
+                }
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 9, weight: .bold))
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .background(Color.secondary.opacity(0.15), in: .capsule)
+                .overlay(Capsule().strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
+                .foregroundStyle(.secondary)
+        }
+        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+        .disabled(targets.isEmpty)
+        .opacity(targets.isEmpty ? 0.4 : 1)
+        .help(targets.isEmpty ? "Every profile already has it, directly or through a profile it builds on" : "Add to another profile")
+    }
+}
+
+// MARK: - Pills
+
 /// One pill per profile that sets the value, in the profile's colour, with its value inside.
-/// Clicking a pill offers to remove that value from the profile.
+/// Click a pill to change that profile's value or remove it.
 struct OriginPills: View {
     @EnvironmentObject var state: AppState
     let def: PreferenceDef
@@ -238,15 +319,14 @@ struct OriginPill: View {
     let def: PreferenceDef
     let origins: [PrefOrigin]
     let index: Int
-    @State private var asking = false
+    @State private var editing = false
 
     private var origin: PrefOrigin { origins[index] }
 
     var body: some View {
-        let winner = index == origins.count - 1
-        let editing = origin.profile == state.device.editingProfile
+        let winner = origin.id == state.controlOrigin(for: def)?.id
         let color = state.color(of: origin.profile)
-        Button { asking = true } label: {
+        Button { editing = true } label: {
             HStack(spacing: 4) {
                 if let icon = state.icon(of: origin.profile) {
                     Image(systemName: icon)
@@ -258,46 +338,51 @@ struct OriginPill: View {
             .font(.caption2.weight(.semibold))
             .padding(.horizontal, 7).padding(.vertical, 2)
             .background(color.opacity(winner ? 0.22 : 0.10), in: .capsule)
-            .overlay(Capsule().stroke(color.opacity(editing ? 0.9 : 0), lineWidth: 1))
-            .foregroundStyle(color.opacity(winner ? 1 : 0.6))
+            .foregroundStyle(color.opacity(origin.active ? (winner ? 1 : 0.6) : 0.45))
         }
         .buttonStyle(.plain)
-        .help(helpText(winner: winner, editing: editing))
-        .popover(isPresented: $asking, arrowEdge: .bottom) { confirm }
+        .help(helpText(winner: winner))
+        .popover(isPresented: $editing, arrowEdge: .bottom) { editor }
     }
 
-    private func helpText(winner: Bool, editing: Bool) -> String {
-        var text = "Stored in the \(origin.profile.capitalized) profile – click to remove"
-        if !winner, let top = origins.last { text += " (overridden by \(top.profile.capitalized))" }
-        if editing { text += ". This is the layer you are editing." }
+    private func helpText(winner: Bool) -> String {
+        var text = "\(origin.profile.capitalized) profile – click to change or remove"
+        if !origin.active { text += " (not on this Mac)" }
+        else if !winner, let top = state.controlOrigin(for: def) { text += " (overridden by \(top.profile.capitalized))" }
         return text
     }
 
-    private var confirm: some View {
-        let below = index > 0 ? origins[index - 1] : nil
-        return VStack(alignment: .leading, spacing: 10) {
-            Text("Remove this value from \(origin.profile.capitalized)?").font(.headline)
-            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 4) {
-                GridRow { Text("Setting").foregroundStyle(.secondary); Text(def.title).bold() }
-                GridRow { Text("Value").foregroundStyle(.secondary); Text(state.formatted(def, origin.value)).bold() }
-                GridRow {
-                    Text("Then").foregroundStyle(.secondary)
-                    if let below {
-                        Text("\(state.formatted(def, below.value)) (from \(below.profile.capitalized))").bold()
-                    } else {
-                        Text("\(state.defaultText(def)) (macOS default)").bold()
-                    }
-                }
+    private var editor: some View {
+        let current = state.profiles[origin.profile]?.preferences[def.id] ?? origin.value
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                ProfileChip(name: origin.profile)
+                Text(def.title).font(.headline)
             }
             HStack {
+                Text("Value in \(origin.profile.capitalized)").foregroundStyle(.secondary)
                 Spacer()
-                Button("Cancel") { asking = false }
-                Button("Remove") { state.remove(def, from: origin.profile); asking = false }
-                    .buttonStyle(.glassProminent)
+                PrefValueControl(def: def, value: current) { state.set(def, to: $0, in: origin.profile) }
+            }
+            if def.osDefault != nil {
+                HStack(spacing: 4) {
+                    Image(systemName: "apple.logo")
+                    Text("macOS default: \(state.defaultText(def))")
+                }
+                .font(.caption).foregroundStyle(.secondary)
+            }
+            Divider()
+            HStack {
+                Button("Remove from \(origin.profile.capitalized)", role: .destructive) {
+                    state.remove(def, from: origin.profile)
+                    editing = false
+                }
+                Spacer()
+                Button("Done") { editing = false }.buttonStyle(.glassProminent)
             }
         }
         .padding(16)
-        .frame(width: 320)
+        .frame(width: 340)
     }
 }
 
@@ -321,7 +406,7 @@ struct LivePill: View {
     }
 }
 
-/// Shows the macOS default; clicking it resets the setting (after asking).
+/// Shows the macOS default; clicking it takes the setting out of every profile (after asking).
 struct DefaultPill: View {
     @EnvironmentObject var state: AppState
     let def: PreferenceDef
@@ -329,11 +414,7 @@ struct DefaultPill: View {
     @State private var asking = false
 
     var body: some View {
-        let current = state.value(for: def)
-        let inEditing = state.isManagedByEditing(def)
-        let differs = def.osDefault != nil && current != def.osDefault
-        let canReset = inEditing
-        if (differs || inEditing) && def.osDefault != nil {
+        if def.osDefault != nil {
             Button { asking = true } label: {
                 HStack(spacing: 3) {
                     Image(systemName: "apple.logo")
@@ -345,67 +426,40 @@ struct DefaultPill: View {
                 .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .disabled(!canReset)
-            .help(canReset ? "macOS default – click to reset" : "macOS default")
+            .help("macOS default – click to reset")
             .popover(isPresented: $asking, arrowEdge: .bottom) { confirm }
         }
     }
 
     private var confirm: some View {
-        let current = state.value(for: def)
-        let others = origins.filter { $0.profile != state.device.editingProfile }
-        return VStack(alignment: .leading, spacing: 10) {
-            Text("Reset “\(def.title)” in the plan?").font(.headline)
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Reset “\(def.title)” to the macOS default?").font(.headline)
             Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 4) {
-                GridRow { Text("Now").foregroundStyle(.secondary); Text(state.formatted(def, current)).bold() }
-                GridRow {
-                    Text("After").foregroundStyle(.secondary)
-                    if let inherited = others.last {
-                        Text("\(state.formatted(def, inherited.value)) (from \(inherited.profile.capitalized))").bold()
-                    } else {
-                        Text("\(state.defaultText(def)) (macOS default)").bold()
-                    }
-                }
+                GridRow { Text("Now").foregroundStyle(.secondary); Text(state.formatted(def, state.value(for: def))).bold() }
+                GridRow { Text("After").foregroundStyle(.secondary); Text(state.defaultText(def)).bold() }
             }
-            if state.isManagedByEditing(def) {
-                Text("It is removed from the \(state.device.editingProfile.capitalized) profile.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
+            Text("It is removed from \(origins.map { $0.profile.capitalized }.joined(separator: ", ")). This Mac changes when you Apply.")
+                .font(.caption).foregroundStyle(.secondary)
             HStack {
                 Spacer()
                 Button("Cancel") { asking = false }
-                Button("Reset") { state.reset(def); asking = false }
-                    .buttonStyle(.glassProminent)
+                Button("Reset") { state.reset(def); asking = false }.buttonStyle(.glassProminent)
             }
         }
         .padding(16)
-        .frame(width: 300)
+        .frame(width: 320)
     }
 }
 
-/// Text field that only writes the preference when the user presses return.
-struct CommitTextField: View {
-    let placeholder: String
-    let initial: String
-    let commit: (String) -> Void
-    @State private var text = ""
+// MARK: - Manual settings
 
-    var body: some View {
-        TextField(placeholder, text: $text)
-            .labelsHidden()
-            .textFieldStyle(.roundedBorder)
-            .frame(width: 200)
-            .onSubmit { commit(text) }
-            .onAppear { text = initial }
-            .onChange(of: initial) { _, new in text = new }
-    }
-}
-
-/// A setting only the user can change, with a shortcut to the right System Settings pane.
 struct ManualSettingSection: View {
     @EnvironmentObject var state: AppState
     let item: ManualSetting
     @State private var text = ""
+
+    /// Notes live in the most specific profile on this Mac.
+    private var target: String { state.layers.last ?? state.device.editingProfile }
 
     var body: some View {
         Section {
@@ -431,15 +485,16 @@ struct ManualSettingSection: View {
                     }
                 }
                 .onChange(of: text) { _, new in
-                    var p = state.editing
-                    p.manualNotes[item.id] = new.isEmpty ? nil : new
-                    state.editing = p
+                    guard var profile = state.profiles[target] else { return }
+                    profile.manualNotes[item.id] = new.isEmpty ? nil : new
+                    state.profiles[target] = profile
+                    state.persist(target)
                 }
         } header: {
             Text(item.title)
         } footer: {
-            Text(item.detail)
+            Text("\(item.detail) Saved in \(target.capitalized).")
         }
-        .onAppear { text = state.viewEffective.manualNotes[item.id] ?? "" }
+        .onAppear { text = state.effective.manualNotes[item.id] ?? "" }
     }
 }

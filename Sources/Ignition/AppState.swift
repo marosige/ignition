@@ -24,6 +24,8 @@ struct PrefOrigin: Identifiable {
     let value: PrefValue
     /// Differs from what is committed in the repo.
     let unsaved: Bool
+    /// The profile is switched on for this Mac.
+    let active: Bool
     var id: String { profile }
 }
 
@@ -235,25 +237,15 @@ final class AppState: ObservableObject {
         live = values
     }
 
-    /// What the edited profile says about a setting: its own value, else what the profiles
-    /// it builds on say. Nil when nothing does.
-    func plannedValue(for def: PreferenceDef) -> PrefValue? {
-        if let v = editing.preferences[def.id] { return v }
-        for name in resolve([device.editingProfile]).dropLast().reversed() {
-            if let v = profiles[name]?.preferences[def.id] { return v }
-        }
-        return nil
-    }
-
-    /// What the control shows: the plan, or the macOS default while the plan is silent.
+    /// What a row's control shows: the plan, or the macOS default while no profile says anything.
     func value(for def: PreferenceDef) -> PrefValue? {
-        plannedValue(for: def) ?? def.osDefault ?? live[def.id]
+        controlOrigin(for: def)?.value ?? def.osDefault ?? live[def.id]
     }
 
-    /// The value a setting starts with when you add it to a profile: what this Mac has
-    /// (when the profile is on this Mac), else the macOS default.
+    /// The value a setting starts with when you add it to a profile: what this Mac has now,
+    /// else the macOS default.
     func initialValue(_ def: PreferenceDef) -> PrefValue {
-        if editingIsActive, let v = live[def.id] { return v }
+        if let v = live[def.id] { return v }
         if let v = def.osDefault { return v }
         switch def.control {
         case .toggle: return .bool(false)
@@ -303,20 +295,33 @@ final class AppState: ObservableObject {
         saveDevice()
     }
 
-    func isManaged(_ def: PreferenceDef) -> Bool {
-        viewEffective.preferences[def.id] != nil
-    }
+    func isManaged(_ def: PreferenceDef) -> Bool { isPlanned(def) }
 
-    func isManagedByEditing(_ def: PreferenceDef) -> Bool {
-        editing.preferences[def.id] != nil
-    }
+    /// Profiles in layering order, then the ones that are not on this Mac.
+    var allProfilesOrdered: [String] { layers + profileNames.filter { !layers.contains($0) } }
 
-    /// Every active profile that sets this preference, in layering order (the last one wins).
+    /// Every profile that sets this preference: the ones on this Mac first (last one wins here).
     func origins(for def: PreferenceDef) -> [PrefOrigin] {
-        viewLayers.compactMap { name in
+        allProfilesOrdered.compactMap { name in
             guard let value = profiles[name]?.preferences[def.id] else { return nil }
             let unsaved = connected && committed[name]?.preferences[def.id] != value
-            return PrefOrigin(profile: name, value: value, unsaved: unsaved)
+            return PrefOrigin(profile: name, value: value, unsaved: unsaved, active: layers.contains(name))
+        }
+    }
+
+    func isPlanned(_ def: PreferenceDef) -> Bool { !origins(for: def).isEmpty }
+
+    /// The entry a row's main control edits: the winner on this Mac, else the last profile that has it.
+    func controlOrigin(for def: PreferenceDef) -> PrefOrigin? {
+        let all = origins(for: def)
+        return all.last(where: \.active) ?? all.last
+    }
+
+    /// Profiles a setting can still be added to (those inheriting it already have it).
+    func profilesToAdd(_ def: PreferenceDef) -> [String] {
+        let have = origins(for: def).map(\.profile)
+        return profileNames.filter { name in
+            !have.contains(name) && !resolve([name]).contains(where: have.contains)
         }
     }
 
@@ -341,18 +346,12 @@ final class AppState: ObservableObject {
         def.osDefault == nil ? "decided by macOS" : formatted(def, def.osDefault)
     }
 
-    /// Plans a value in the profile being edited. The Mac only changes when you Apply.
-    func set(_ def: PreferenceDef, to value: PrefValue) {
-        var p = editing
-        p.preferences[def.id] = value
-        editing = p
-    }
-
-    /// Takes the value out of the profile being edited.
-    func reset(_ def: PreferenceDef) {
-        var p = editing
-        p.preferences[def.id] = nil
-        editing = p
+    /// Plans a value in a profile. The Mac only changes when you Apply.
+    func set(_ def: PreferenceDef, to value: PrefValue, in profileName: String) {
+        guard var profile = profiles[profileName] else { return }
+        profile.preferences[def.id] = value
+        profiles[profileName] = profile
+        persist(profileName)
     }
 
     /// Removes this profile's value for a setting (the one a pill stands for).
@@ -363,12 +362,14 @@ final class AppState: ObservableObject {
         persist(name)
     }
 
+    /// Takes the setting out of every profile (the plan goes back to the macOS default).
+    func reset(_ def: PreferenceDef) {
+        for name in profileNames where profiles[name]?.preferences[def.id] != nil { remove(def, from: name) }
+    }
+
     /// Puts what this Mac has now into a profile.
     func adopt(_ def: PreferenceDef, into profileName: String) {
-        guard var profile = profiles[profileName], let value = live[def.id] ?? def.osDefault else { return }
-        profile.preferences[def.id] = value
-        profiles[profileName] = profile
-        persist(profileName)
+        set(def, to: initialValue(def), in: profileName)
     }
 
     /// Stepper clicks come in bursts; restart Dock/Finder once things settle.

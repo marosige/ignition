@@ -149,13 +149,9 @@ extension AppState {
         return out
     }
 
-    /// Jumps to a setting: edits the layer that owns it, opens its page, scrolls and flashes the row.
+    /// Jumps to a setting: opens its page, scrolls to it and flashes the row.
     func reveal(_ prefID: String) {
         guard let def = PreferenceCatalog.byID[prefID] else { return }
-        if let owner = origins(for: def).last?.profile, owner != device.editingProfile {
-            device.editingProfile = owner
-            saveDevice()
-        }
         navigate(to: .pref(def.category))
         focusPref = prefID
     }

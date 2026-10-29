@@ -512,11 +512,6 @@ struct PackageDetailView: View {
                     .padding(4)
                 }
 
-                if !isInstalled, !state.editingIsActive {
-                    Text("You are editing \(state.device.editingProfile.capitalized), which is not on this Mac. “Get” installs here only; use the + pill to add it to a profile.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-
                 if let lines = store.logs[package.id], !lines.isEmpty {
                     GroupBox("Output") {
                         ScrollView {
@@ -533,23 +528,16 @@ struct PackageDetailView: View {
         .navigationTitle(package.name)
         .task { await store.refreshInstalled() }
         .confirmationDialog("Get \(package.name)", isPresented: $confirmGet) {
-            let target = state.device.editingProfile
-            let alreadyThere = inProfiles.contains(target)
-            if !alreadyThere && state.editingIsActive {
-                Button("Add to \(target.capitalized) and install now") {
-                    Task { await store.install(package, addTo: target, state: state) }
-                }
-            }
-            if !alreadyThere {
-                Button("Add to \(target.capitalized) only (installs with the next Apply)") {
-                    store.add(package.ref, comment: package.desc, to: target, state: state)
+            ForEach(state.layers, id: \.self) { name in
+                Button("Install and add to \(name.capitalized)") {
+                    Task { await store.install(package, addTo: name, state: state) }
                 }
             }
             Button("Install on this Mac only") {
                 Task { await store.install(package, addTo: nil, state: state) }
             }
         } message: {
-            Text("Ignition plans your Macs: add it to a profile so every Mac that uses it gets it.")
+            Text("Ignition plans your Macs: put it in a profile so every Mac that uses it gets it. You can also add it to other profiles with the + pill without installing.")
         }
         .confirmationDialog("Uninstall \(package.name) from this Mac?", isPresented: $confirmDelete) {
             if activeHave.isEmpty {
@@ -578,19 +566,11 @@ struct PackageDetailView: View {
         } else if isInstalled {
             Button("Uninstall", role: .destructive) { confirmDelete = true }.buttonStyle(.glass).controlSize(.large)
         } else {
-            HStack {
-                if !state.editingIsActive, !inProfiles.contains(state.device.editingProfile) {
-                    Button("Add to \(state.device.editingProfile.capitalized)") {
-                        store.add(package.ref, comment: package.desc, to: state.device.editingProfile, state: state)
-                    }
-                    .buttonStyle(.glass).controlSize(.large)
-                }
-                Button("Get") {
-                    if activeHave.isEmpty { confirmGet = true }
-                    else { Task { await store.install(package, addTo: nil, state: state) } }
-                }
-                .buttonStyle(.glassProminent).controlSize(.large)
+            Button("Get") {
+                if activeHave.isEmpty { confirmGet = true }
+                else { Task { await store.install(package, addTo: nil, state: state) } }
             }
+            .buttonStyle(.glassProminent).controlSize(.large)
         }
     }
 }
@@ -616,13 +596,20 @@ struct BrewfileView: View {
             ForEach(layers + others, id: \.self) { name in
                 section(name, onThisMac: state.layers.contains(name))
             }
-            Section("Add VS Code extension to \(state.device.editingProfile.capitalized)") {
+            Section("Add a VS Code extension") {
                 HStack {
                     TextField("publisher.extension-id", text: $newExtension)
-                    Button("Add") {
-                        store.add(.vscode(newExtension.trimmingCharacters(in: .whitespaces)), to: state.device.editingProfile, state: state)
-                        newExtension = ""
+                    Menu("Add to…") {
+                        ForEach(state.profileNames, id: \.self) { name in
+                            Button {
+                                store.add(.vscode(newExtension.trimmingCharacters(in: .whitespaces)), to: name, state: state)
+                                newExtension = ""
+                            } label: {
+                                Label(name.capitalized, systemImage: state.icon(of: name) ?? "square.stack.3d.up")
+                            }
+                        }
                     }
+                    .menuStyle(.button).buttonStyle(.glass).fixedSize()
                     .disabled(newExtension.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
