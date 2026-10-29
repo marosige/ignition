@@ -241,6 +241,14 @@ final class AppState: ObservableObject {
         applyEffective(def)
     }
 
+    /// Puts a value that is only set on this Mac into a profile, without touching the system.
+    func adopt(_ def: PreferenceDef, into profileName: String) {
+        guard var profile = profiles[profileName], let value = live[def.id] ?? def.osDefault else { return }
+        profile.preferences[def.id] = value
+        profiles[profileName] = profile
+        persist(profileName)
+    }
+
     /// Makes this Mac match what the switched-on profiles say about a setting.
     private func applyEffective(_ def: PreferenceDef) {
         guard editingIsActive else { return }
