@@ -373,36 +373,41 @@ struct BrewInstalledView: View {
     @EnvironmentObject var store: BrewStore
     @EnvironmentObject var state: AppState
     @State private var query = ""
+    @State private var onlyUnplanned = false
 
+    /// Stable order: rows never jump when you add a package to a profile.
     var filtered: [BrewPackage] {
-        query.isEmpty ? store.installed : store.installed.filter {
-            $0.name.localizedCaseInsensitiveContains(query) || $0.desc.localizedCaseInsensitiveContains(query)
+        store.installed.filter { p in
+            (query.isEmpty || p.name.localizedCaseInsensitiveContains(query) || p.desc.localizedCaseInsensitiveContains(query))
+                && (!onlyUnplanned || store.profiles(containing: p.ref, state: state).isEmpty)
         }
     }
 
     var body: some View {
-        let loose = filtered.filter { store.profiles(containing: $0.ref, state: state).isEmpty }
-        let kept = filtered.filter { !store.profiles(containing: $0.ref, state: state).isEmpty }
         List {
-            if !loose.isEmpty {
-                Section {
-                    ForEach(loose) { row($0) }
-                } header: {
-                    Text("Only on this Mac")
-                } footer: {
-                    Text("Not in any profile, so your other Macs will not get these. Use + to add one to a profile.")
+            ForEach([BrewPackage.Kind.cask, .formula], id: \.self) { kind in
+                let rows = filtered.filter { $0.kind == kind }
+                if !rows.isEmpty {
+                    Section(kind == .cask ? "Apps" : "Command line tools") {
+                        ForEach(rows) { row($0) }
+                    }
                 }
             }
-            if !kept.isEmpty {
-                Section("In your profiles") { ForEach(kept) { row($0) } }
-            }
         }
-        .overlay { if store.installed.isEmpty { ContentUnavailableView("Nothing installed yet", systemImage: "mug") } }
+        .overlay {
+            if store.installed.isEmpty { ContentUnavailableView("Nothing installed yet", systemImage: "mug") }
+            else if filtered.isEmpty { ContentUnavailableView("Nothing to show", systemImage: "checkmark.circle",
+                                                              description: Text(onlyUnplanned ? "Everything installed is in a profile." : "")) }
+        }
         .navigationTitle("Installed")
         .searchable(text: $query, placement: .toolbar)
         .navigationDestination(for: BrewPackage.self) { PackageDetailView(package: $0) }
         .toolbar {
-            Button { Task { await store.refreshInstalled() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
+            ToolbarItemGroup {
+                Toggle(isOn: $onlyUnplanned) { Label("Not in a profile", systemImage: "line.3.horizontal.decrease") }
+                    .help("Show only what is installed here but in no profile")
+                Button { Task { await store.refreshInstalled() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
+            }
         }
         .task { await store.refreshInstalled() }
     }

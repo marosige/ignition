@@ -157,12 +157,12 @@ struct SidebarView: View {
                 Label("Dotfiles", systemImage: "doc.text").tag(Destination.dotfiles)
             }
             Section("Software") {
+                Label("Profile Software", systemImage: "list.bullet.rectangle").tag(Destination.brewfile)
                 DisclosureGroup(isExpanded: $homebrewExpanded) {
                     Label("Discover", systemImage: "sparkle.magnifyingglass").tag(Destination.brewDiscover)
                     Label("Installed", systemImage: "checkmark.circle")
                         .badge(store.installed.filter { store.profiles(containing: $0.ref, state: state).isEmpty }.count)
                         .tag(Destination.brewInstalled)
-                    Label("Profile Software", systemImage: "list.bullet.rectangle").tag(Destination.brewfile)
                 } label: {
                     Label("Homebrew", systemImage: "mug")
                 }
