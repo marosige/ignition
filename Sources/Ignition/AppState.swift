@@ -262,7 +262,7 @@ final class AppState: ObservableObject {
         var p = editing
         p.preferences[def.id] = value
         editing = p
-        applyEffective(def)
+        applyEffective(def, changed: device.editingProfile)
     }
 
     /// Drops the setting from the profile; this Mac falls back to what remains, or to the macOS default.
@@ -270,7 +270,16 @@ final class AppState: ObservableObject {
         var p = editing
         p.preferences[def.id] = nil
         editing = p
-        applyEffective(def)
+        applyEffective(def, changed: device.editingProfile)
+    }
+
+    /// Removes this profile's value for a setting (the one a pill stands for).
+    func remove(_ def: PreferenceDef, from name: String) {
+        guard var profile = profiles[name] else { return }
+        profile.preferences[def.id] = nil
+        profiles[name] = profile
+        persist(name)
+        applyEffective(def, changed: name)
     }
 
     /// Puts a value that is only set on this Mac into a profile, without touching the system.
@@ -282,8 +291,8 @@ final class AppState: ObservableObject {
     }
 
     /// Makes this Mac match what the switched-on profiles say about a setting.
-    private func applyEffective(_ def: PreferenceDef) {
-        guard editingIsActive else { return }
+    private func applyEffective(_ def: PreferenceDef, changed: String) {
+        guard layers.contains(changed) else { return }
         if let value = effective.preferences[def.id] {
             let r = DefaultsService.write(def, value)
             if !r.ok { errorMessage = "\(def.title): \(r.combined)"; return }

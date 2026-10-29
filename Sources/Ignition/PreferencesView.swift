@@ -132,6 +132,7 @@ struct PreferenceRow: View {
 }
 
 /// One pill per profile that sets the value, in the profile's colour, with its value inside.
+/// Clicking a pill offers to remove that value from the profile.
 struct OriginPills: View {
     @EnvironmentObject var state: AppState
     let def: PreferenceDef
@@ -139,20 +140,7 @@ struct OriginPills: View {
 
     var body: some View {
         ForEach(Array(origins.enumerated()), id: \.element.id) { index, origin in
-            let winner = index == origins.count - 1
-            let editing = origin.profile == state.device.editingProfile
-            let color = state.color(of: origin.profile)
-            HStack(spacing: 4) {
-                Text(label(origin.profile))
-                Text("·").opacity(0.6)
-                Text(state.formatted(def, origin.value))
-            }
-            .font(.caption2.weight(.semibold))
-            .padding(.horizontal, 7).padding(.vertical, 2)
-            .background(color.opacity(winner ? 0.22 : 0.10), in: .capsule)
-            .overlay(Capsule().stroke(color.opacity(editing ? 0.9 : 0), lineWidth: 1))
-            .foregroundStyle(color.opacity(winner ? 1 : 0.6))
-            .help(helpText(origin, winner: winner, editing: editing))
+            OriginPill(def: def, origins: origins, index: index)
         }
         if origins.contains(where: \.unsaved) {
             HStack(spacing: 3) {
@@ -166,16 +154,70 @@ struct OriginPills: View {
             .help("This change only exists on this Mac. Use Save to GitHub.")
         }
     }
+}
 
-    private func label(_ name: String) -> String {
-        state.profileNames.count > 1 ? name.capitalized : "Saved"
+struct OriginPill: View {
+    @EnvironmentObject var state: AppState
+    let def: PreferenceDef
+    let origins: [PrefOrigin]
+    let index: Int
+    @State private var asking = false
+
+    private var origin: PrefOrigin { origins[index] }
+
+    var body: some View {
+        let winner = index == origins.count - 1
+        let editing = origin.profile == state.device.editingProfile
+        let color = state.color(of: origin.profile)
+        Button { asking = true } label: {
+            HStack(spacing: 4) {
+                Text(state.profileNames.count > 1 ? origin.profile.capitalized : "Saved")
+                Text("·").opacity(0.6)
+                Text(state.formatted(def, origin.value))
+            }
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 7).padding(.vertical, 2)
+            .background(color.opacity(winner ? 0.22 : 0.10), in: .capsule)
+            .overlay(Capsule().stroke(color.opacity(editing ? 0.9 : 0), lineWidth: 1))
+            .foregroundStyle(color.opacity(winner ? 1 : 0.6))
+        }
+        .buttonStyle(.plain)
+        .help(helpText(winner: winner, editing: editing))
+        .popover(isPresented: $asking, arrowEdge: .bottom) { confirm }
     }
 
-    private func helpText(_ origin: PrefOrigin, winner: Bool, editing: Bool) -> String {
-        var text = "Stored in the \(origin.profile.capitalized) profile"
-        if !winner, let top = origins.last { text += " – overridden by \(top.profile.capitalized)" }
-        if editing { text += " (the one you are editing)" }
+    private func helpText(winner: Bool, editing: Bool) -> String {
+        var text = "Stored in the \(origin.profile.capitalized) profile – click to remove"
+        if !winner, let top = origins.last { text += " (overridden by \(top.profile.capitalized))" }
+        if editing { text += ". This is the layer you are editing." }
         return text
+    }
+
+    private var confirm: some View {
+        let below = index > 0 ? origins[index - 1] : nil
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Remove this value from \(origin.profile.capitalized)?").font(.headline)
+            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 4) {
+                GridRow { Text("Setting").foregroundStyle(.secondary); Text(def.title).bold() }
+                GridRow { Text("Value").foregroundStyle(.secondary); Text(state.formatted(def, origin.value)).bold() }
+                GridRow {
+                    Text("Then").foregroundStyle(.secondary)
+                    if let below {
+                        Text("\(state.formatted(def, below.value)) (from \(below.profile.capitalized))").bold()
+                    } else {
+                        Text("\(state.defaultText(def)) (macOS default)").bold()
+                    }
+                }
+            }
+            HStack {
+                Spacer()
+                Button("Cancel") { asking = false }
+                Button("Remove") { state.remove(def, from: origin.profile); asking = false }
+                    .buttonStyle(.glassProminent)
+            }
+        }
+        .padding(16)
+        .frame(width: 320)
     }
 }
 
@@ -191,12 +233,11 @@ struct DefaultPill: View {
         let inEditing = state.isManagedByEditing(def)
         let differs = def.osDefault != nil && current != def.osDefault
         let canReset = inEditing || (origins.isEmpty && differs && state.editingIsActive)
-        if def.osDefault != nil || inEditing {
+        if (differs || inEditing) && def.osDefault != nil {
             Button { asking = true } label: {
                 HStack(spacing: 3) {
                     Image(systemName: "apple.logo")
                     Text(state.defaultText(def))
-                    if canReset { Image(systemName: "arrow.counterclockwise").font(.system(size: 8, weight: .bold)) }
                 }
                 .font(.caption2.weight(.medium))
                 .padding(.horizontal, 7).padding(.vertical, 2)
