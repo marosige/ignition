@@ -1,6 +1,6 @@
 # Ignition 🔥
 
-**Ignite your Mac.** A native macOS app that turns any Mac into *your* Mac – and keeps it that way.
+**Ignite a reproducible Mac.** A native macOS app that turns any Mac into *your* Mac – the same settings, apps, Dock and dotfiles every time – and keeps it that way.
 
 You configure everything with a GUI that looks like System Settings (Liquid Glass, macOS 26+), save it
 to a private GitHub repo, and on any other Mac you connect the repo, press **Apply** and you are done.

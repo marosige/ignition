@@ -17,7 +17,7 @@ struct OverviewView: View {
                         .glassEffect(.regular, in: .rect(cornerRadius: 24))
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Ignition").font(.largeTitle.bold())
-                        Text("Ignite your Mac.").font(.title3).foregroundStyle(.secondary)
+                        Text("Ignite a reproducible Mac.").font(.title3).foregroundStyle(.secondary)
                     }
                 }
 
