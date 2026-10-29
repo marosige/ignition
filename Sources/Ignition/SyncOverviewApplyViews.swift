@@ -107,153 +107,228 @@ struct ApplyView: View {
     @EnvironmentObject var state: AppState
     @State private var running = false
     @State private var output: [String] = []
-    @State private var results: [String: Bool] = [:]
-    @State private var selected: Set<String> = Set(ApplyView.steps.map { $0.0 })
+    @State private var plan: [ApplyAction]?
+    @State private var results: [ApplyStep: Bool] = [:]
+    @State private var showOptions = false
+    @State private var draft: Set<ApplyStep> = Set(ApplyStep.allCases)
 
-    static let steps: [(String, String, String)] = [
-        ("folders", "Create folders", "folder.badge.plus"),
-        ("packages", "Install packages", "shippingbox"),
-        ("dotfiles", "Link dotfiles", "doc.text"),
-        ("preferences", "Apply settings", "slider.horizontal.3"),
-        ("dock", "Arrange the Dock", "dock.rectangle"),
-        ("sidebar", "Set the Finder sidebar", "sidebar.left"),
-        ("startup", "Set login apps", "power"),
-    ]
+    private var firstRun: Bool { state.device.lastApplied == nil }
 
     var body: some View {
         VStack(spacing: 0) {
             Form {
-                Section {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(state.device.lastApplied == nil ? "This Mac has not been set up yet" : "Make this Mac match the plan")
-                                .font(.headline)
-                            Text(state.device.lastApplied.map { "Last applied \(ago($0))" }
-                                 ?? "Apply installs your packages, links your dotfiles and sets everything in the plan.")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Button { Task { await run() } } label: {
-                            if running { ProgressView().controlSize(.small) }
-                            else { Label(state.device.lastApplied == nil ? "Set up this Mac" : "Apply", systemImage: "play.fill") }
-                        }
-                        .buttonStyle(.glassProminent).controlSize(.large)
-                        .disabled(running || selected.isEmpty || !state.hasConfig)
-                    }
-                }
-                let changes = state.pending
-                if !changes.isEmpty {
-                    Section {
-                        ForEach(changes) { change in
-                            Button { state.reveal(change.def.id) } label: {
-                                HStack {
-                                    Image(systemName: change.def.category.symbol).foregroundStyle(.secondary).frame(width: 22)
-                                    Text(change.def.title)
-                                    Spacer()
-                                    Text(state.formatted(change.def, change.from)).foregroundStyle(.secondary)
-                                    Image(systemName: "arrow.right").font(.caption).foregroundStyle(.tertiary)
-                                    Text(state.formatted(change.def, change.to)).bold()
-                                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .help("Open this setting in the plan")
-                        }
-                    } header: {
-                        Text("Settings that will change (\(changes.count))")
-                    } footer: {
-                        Text("Click a setting to find it in the plan – change or remove it there if you do not want it. Packages, dotfiles, Dock and the rest are checked and fixed while applying.")
-                    }
-                }
-                Section {
-                    ForEach(Self.steps, id: \.0) { id, title, icon in
-                        HStack {
-                            Toggle(isOn: Binding(get: { selected.contains(id) }, set: { on in
-                                if on { selected.insert(id) } else { selected.remove(id) }
-                            })) { Label(title, systemImage: icon) }
-                            if let ok = results[id] {
-                                Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill").foregroundStyle(ok ? .green : .red)
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Turn \(state.device.deviceName) into your \(state.layers.map(\.capitalized).joined(separator: " + ")) Mac")
-                } footer: {
-                    Text("Settings that need administrator rights ask for your password once.")
-                }
-                let reminders = ManualSettings.all.filter { state.effective.manualNotes[$0.id] != nil }
-                if !reminders.isEmpty {
-                    Section {
-                        ForEach(reminders) { item in
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text(item.title).font(.headline)
-                                    Spacer()
-                                    Button("Open System Settings") {
-                                        if let url = URL(string: item.settingsURL) { NSWorkspace.shared.open(url) }
-                                    }.buttonStyle(.glass)
-                                }
-                                Text(state.effective.manualNotes[item.id] ?? "").foregroundStyle(.secondary)
-                            }
-                        }
-                    } header: { Text("Do by hand") } footer: { Text("macOS does not allow scripts to change these.") }
+                if !state.applyConfigured {
+                    optionsSection(first: true)
+                } else {
+                    headerSection
+                    planSections
+                    reminderSection
                 }
             }
             .formStyle(.grouped)
             .frame(maxHeight: .infinity)
 
-            if running || !output.isEmpty {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    Text(output.joined(separator: "\n"))
-                        .font(.caption.monospaced())
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                        .padding(10)
-                        .id("end")
-                }
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(.quaternary))
-                .padding([.horizontal, .bottom])
-                .onChange(of: output.count) { _, _ in proxy.scrollTo("end", anchor: .bottom) }
-            }
-            .frame(height: 200)
-            }
+            if running || !output.isEmpty { logView }
         }
         .navigationTitle("Apply to this Mac")
+        .toolbar {
+            if state.applyConfigured {
+                ToolbarItem {
+                    Button { draft = state.enabledSteps; showOptions = true } label: { Label("Options", systemImage: "gearshape") }
+                        .help("Choose what Apply handles on this Mac")
+                }
+            }
+        }
+        .sheet(isPresented: $showOptions) {
+            VStack(spacing: 0) {
+                Form { optionsSection(first: false) }.formStyle(.grouped)
+                HStack {
+                    Button("Cancel") { showOptions = false }.buttonStyle(.glass)
+                    Spacer()
+                    Button("Save") { saveOptions(); showOptions = false }.buttonStyle(.glassProminent)
+                }
+                .padding()
+            }
+            .frame(width: 520, height: 520)
+        }
+        .task(id: "\(state.applyConfigured)|\(state.planFingerprint)|\(state.enabledSteps.count)") { await refreshPlan() }
+    }
+
+    // MARK: Sections
+
+    private func optionsSection(first: Bool) -> some View {
+        Section {
+            ForEach(ApplyStep.allCases) { step in
+                Toggle(isOn: Binding(get: { draft.contains(step) }, set: { on in
+                    if on { draft.insert(step) } else { draft.remove(step) }
+                })) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Label(step.title, systemImage: step.symbol)
+                        Text(step.summary).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            if first {
+                Button("Continue") { saveOptions() }
+                    .buttonStyle(.glassProminent).controlSize(.large)
+                    .disabled(draft.isEmpty)
+            }
+        } header: {
+            Text(first ? "What should Apply do on \(state.device.deviceName)?" : "Apply handles")
+        } footer: {
+            Text(first ? "Choose once – Ignition remembers it for this Mac. You can change it later from the gear in the toolbar."
+                       : "Parts you switch off are never touched by Apply on this Mac.")
+        }
+    }
+
+    private var headerSection: some View {
+        Section {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(.headline)
+                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button { Task { await run() } } label: {
+                    if running { ProgressView().controlSize(.small) }
+                    else { Label(firstRun ? "Set up this Mac" : "Apply", systemImage: "play.fill") }
+                }
+                .buttonStyle(.glassProminent).controlSize(.large)
+                .disabled(running || (plan?.isEmpty ?? true) || !state.hasConfig)
+            }
+        }
+    }
+
+    private var title: String {
+        guard let plan else { return "Checking this Mac…" }
+        if plan.isEmpty { return "Everything is in place" }
+        return "\(plan.count) thing\(plan.count == 1 ? "" : "s") to do"
+    }
+
+    private var subtitle: String {
+        if plan == nil { return "Comparing your profiles with what is on this Mac." }
+        if plan?.isEmpty == true {
+            return state.device.lastApplied.map { "Last applied \(ago($0)). Nothing differs from your profiles." } ?? "Nothing differs from your profiles."
+        }
+        return "Apply will do exactly this. Anything not listed is already the way your profiles say."
+    }
+
+    @ViewBuilder
+    private var planSections: some View {
+        if let plan {
+            ForEach(ApplyStep.allCases.filter { step in plan.contains { $0.step == step } }) { step in
+                let actions = plan.filter { $0.step == step }
+                Section {
+                    ForEach(actions) { action in
+                        HStack(spacing: 10) {
+                            Image(systemName: "plus.circle.fill").foregroundStyle(.green)
+                            if let symbol = action.symbol { Image(systemName: symbol).foregroundStyle(.secondary).frame(width: 20) }
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(action.title)
+                                if let detail = action.detail { Text(detail).font(.caption).foregroundStyle(.secondary) }
+                            }
+                            Spacer()
+                            if action.prefID != nil { Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary) }
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture { if let id = action.prefID { state.reveal(id) } }
+                        .help(action.prefID != nil ? "Open this setting in the plan" : "")
+                    }
+                } header: {
+                    HStack(spacing: 6) {
+                        Label("\(step.title) (\(actions.count))", systemImage: step.symbol)
+                        if let ok = results[step] {
+                            Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill").foregroundStyle(ok ? .green : .red)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var reminderSection: some View {
+        let reminders = ManualSettings.all.filter { state.effective.manualNotes[$0.id] != nil }
+        if !reminders.isEmpty {
+            Section {
+                ForEach(reminders) { item in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(item.title).font(.headline)
+                            Spacer()
+                            Button("Open System Settings") {
+                                if let url = URL(string: item.settingsURL) { NSWorkspace.shared.open(url) }
+                            }.buttonStyle(.glass)
+                        }
+                        Text(state.effective.manualNotes[item.id] ?? "").foregroundStyle(.secondary)
+                    }
+                }
+            } header: { Text("Do by hand") } footer: { Text("macOS does not allow scripts to change these.") }
+        }
+    }
+
+    private var logView: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                Text(output.joined(separator: "\n"))
+                    .font(.caption.monospaced())
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+                    .padding(10)
+                    .id("end")
+            }
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(.quaternary))
+            .padding([.horizontal, .bottom])
+            .onChange(of: output.count) { _, _ in proxy.scrollTo("end", anchor: .bottom) }
+        }
+        .frame(height: 200)
+    }
+
+    // MARK: Actions
+
+    private func saveOptions() {
+        state.setApplySteps(draft)
+        plan = nil
+        Task { await refreshPlan() }
+    }
+
+    private func refreshPlan() async {
+        guard state.applyConfigured else { return }
+        state.refreshLive()
+        plan = await state.computeApplyPlan()
     }
 
     @MainActor
     private func run() async {
+        guard let planned = plan, !planned.isEmpty else { return }
         running = true
         output = []
         results = [:]
         let profile = state.effective
         let names = state.layers
-        let selected = self.selected
         let live = LineSink { line in Task { @MainActor in output.append(line) } }
 
-        for (id, title, _) in Self.steps where selected.contains(id) {
-            output.append("▶ \(title)")
+        for step in ApplyStep.allCases where planned.contains(where: { $0.step == step }) {
+            output.append("▶ \(step.title)")
             let ok = await Task.detached(priority: .userInitiated) { () -> Bool in
                 let log: Setup.Log = { live.send($0) }
-                switch id {
-                case "folders": return Setup.createDirectories(profile.directories, log: log)
-                case "packages": return Setup.installPackages(profile.packages, log: log)
-                case "dotfiles": return Setup.linkDotfiles(profiles: names, copyFiles: profile.copyFiles, log: log)
-                case "preferences": return Setup.applyPreferences(profile.preferences, log: log)
-                case "dock": return profile.dock.map { Setup.applyDock($0, log: log) } ?? true
-                case "sidebar": return profile.finderSidebar.map { Setup.applySidebar($0, log: log) } ?? true
-                case "startup": return Setup.applyStartup(profile.startup, log: log)
-                default: return true
+                switch step {
+                case .folders: return Setup.createDirectories(profile.directories, log: log)
+                case .packages: return Setup.installPackages(profile.packages, log: log)
+                case .dotfiles: return Setup.linkDotfiles(profiles: names, copyFiles: profile.copyFiles, log: log)
+                case .preferences: return Setup.applyPreferences(profile.preferences, log: log)
+                case .dock: return profile.dock.map { Setup.applyDock($0, log: log) } ?? true
+                case .sidebar: return profile.finderSidebar.map { Setup.applySidebar($0, log: log) } ?? true
+                case .startup: return Setup.applyStartup(profile.startup, log: log)
                 }
             }.value
-            results[id] = ok
-            output.append(ok ? "✓ \(title) done\n" : "✗ \(title) had problems\n")
+            results[step] = ok
+            output.append(ok ? "✓ \(step.title) done\n" : "✗ \(step.title) had problems\n")
         }
         state.refreshLive()
         if results.values.contains(true) { state.markApplied() }
         running = false
+        plan = await state.computeApplyPlan()
     }
 }
 
