@@ -293,7 +293,7 @@ public struct GitSync {
     /// What this Mac changed and GitHub does not have yet.
     public func localDiff() -> [FileDiff] {
         git(["add", "-N", "."])
-        return parse(git(hasCommits ? ["diff", "HEAD"] : ["diff"]).out)
+        return parse(git(["diff", mergeBase()]).out)
     }
 
     /// What GitHub has and this Mac does not.
@@ -341,8 +341,9 @@ public struct GitSync {
         let out: String
         switch side {
         case .mine:
+            // Everything GitHub does not have yet, committed or not.
             git(["add", "-N", "."])
-            out = git(hasCommits ? ["diff", "HEAD", "--name-status"] : ["diff", "--name-status"]).out
+            out = git(["diff", mergeBase(), "--name-status"]).out
         case .theirs:
             out = git(["diff", mergeBase(), "origin/\(currentBranch)", "--name-status"]).out
         }

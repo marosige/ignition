@@ -35,7 +35,7 @@ extension AppState {
             guard let name = rest.split(separator: "/").first.map(String.init) else { continue }
             names[name, default: []].append(entry)
         }
-        let (oldRev, newRev): (GitSync.Revision, GitSync.Revision) = side == .mine ? (.head, .working) : (.base, .remote)
+        let (oldRev, newRev): (GitSync.Revision, GitSync.Revision) = side == .mine ? (.base, .working) : (.base, .remote)
         func decode(_ name: String, _ rev: GitSync.Revision) -> Profile? {
             guard let data = sync.fileData("\(folder)/profiles/\(name)/profile.json", at: rev) else { return nil }
             return try? JSONDecoder().decode(Profile.self, from: data)

@@ -14,17 +14,106 @@ struct SyncView: View {
     @EnvironmentObject var state: AppState
 
     var body: some View {
+        let info = state.syncInfo
+        let hasLocal = !state.changedFiles.isEmpty || (info?.ahead ?? 0) > 0
+        let hasIncoming = (info?.behind ?? 0) > 0
         Form {
             Section { StatusCard() }
-            if !state.changedFiles.isEmpty {
-                Section("Changes (\(state.changedFiles.count))") {
-                    ForEach(state.changedFiles, id: \.self) { Text($0).font(.caption.monospaced()).lineLimit(1) }
-                }
+            if hasLocal {
+                Section {
+                    ChangeList(side: .mine)
+                } header: { Text("Changes to save") }
+            }
+            if hasIncoming {
+                Section {
+                    ChangeList(side: .theirs)
+                } header: { Text("New on GitHub") }
             }
         }
         .formStyle(.grouped)
         .navigationTitle("GitHub Sync")
         .task { await state.checkSync() }
+    }
+}
+
+enum ChangeSide: String, CaseIterable, Identifiable {
+    case mine = "My changes", theirs = "On GitHub"
+    var id: String { rawValue }
+}
+
+/// The changes between this Mac and GitHub in plain terms, grouped by profile.
+/// Your own changes can be undone; settings open in the plan when clicked.
+struct ChangeList: View {
+    @EnvironmentObject var state: AppState
+    let side: ChangeSide
+    var onNavigate: (() -> Void)?
+    @State private var changes: [PlanChange] = []
+    @State private var loading = true
+
+    private var reloadKey: String {
+        "\(side.rawValue)|\(state.changedFiles)|\(state.syncInfo?.ahead ?? 0)|\(state.syncInfo?.behind ?? 0)"
+    }
+
+    private var profileNames: [String] {
+        var seen = Set<String>()
+        return changes.map(\.profile).filter { seen.insert($0).inserted }
+    }
+
+    var body: some View {
+        Group {
+            if loading && changes.isEmpty {
+                ProgressView().controlSize(.small)
+            } else if changes.isEmpty {
+                Text(side == .mine ? "Nothing changed on this Mac" : "Nothing new on GitHub").foregroundStyle(.secondary)
+            } else {
+                ForEach(profileNames, id: \.self) { name in
+                    HStack(spacing: 6) {
+                        ProfileChip(name: name, showName: true)
+                    }
+                    ForEach(changes.filter { $0.profile == name }) { row($0) }
+                }
+            }
+        }
+        .task(id: reloadKey) { await load() }
+    }
+
+    private func row(_ change: PlanChange) -> some View {
+        let color: Color = change.kind == .added ? .green : (change.kind == .removed ? .red : .orange)
+        let mark = change.kind == .added ? "plus.circle.fill" : (change.kind == .removed ? "minus.circle.fill" : "pencil.circle.fill")
+        let canOpen = side == .mine && change.prefID != nil
+        return HStack(spacing: 10) {
+            Image(systemName: mark).foregroundStyle(color)
+            Image(systemName: change.symbol).foregroundStyle(.secondary).frame(width: 20)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(change.title)
+                if let detail = change.detail { Text(detail).font(.caption).foregroundStyle(.secondary) }
+            }
+            Spacer()
+            if side == .mine, change.undo != nil {
+                Button {
+                    state.undo(change)
+                } label: { Label("Undo", systemImage: "arrow.uturn.backward") }
+                .buttonStyle(.glass).controlSize(.small)
+                .help("Put it back the way it is on GitHub")
+            }
+            if canOpen { Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary) }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard canOpen, let id = change.prefID else { return }
+            onNavigate?()
+            state.reveal(id)
+        }
+    }
+
+    private func load() async {
+        guard let sync = state.sync else { return }
+        loading = true
+        let diffSide: GitSync.DiffSide = side == .mine ? .mine : .theirs
+        let folder = AppPaths.normalizeFolder(state.device.configFolder)
+        let deltas = await Task.detached { AppState.loadDeltas(sync: sync, side: diffSide, folder: folder) }.value
+        changes = deltas.flatMap { state.planChanges($0) }
+        loading = false
     }
 }
 
@@ -91,6 +180,17 @@ struct SyncInfoPopover: View {
                 row("Local copy", AppPaths.repo.path)
             }
             .font(.caption)
+            if !state.changedFiles.isEmpty {
+                Divider()
+                Text("Changed files (\(state.changedFiles.count))").font(.subheadline.bold())
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(state.changedFiles, id: \.self) { Text($0).font(.caption.monospaced()).lineLimit(1) }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 120)
+            }
             Divider()
             Text("History").font(.subheadline.bold())
             if state.commits.isEmpty {
@@ -234,27 +334,19 @@ struct StatusCard: View {
 
 // MARK: - Diff
 
-/// What changed, in plain terms: settings, packages, Dock... with undo for your own changes.
+/// Full-screen view of the same changes, with the raw diff for the curious.
 struct DiffSheet: View {
     @EnvironmentObject var state: AppState
     @Environment(\.dismiss) private var dismiss
-    enum Side: String, CaseIterable, Identifiable { case mine = "My changes", theirs = "On GitHub"; var id: String { rawValue } }
-    @State private var side: Side = .mine
-    @State private var changes: [PlanChange] = []
+    @State private var side: ChangeSide = .mine
     @State private var raw: [FileDiff] = []
     @State private var technical = false
-    @State private var loading = false
-
-    private var profileNames: [String] {
-        var seen = Set<String>()
-        return changes.map(\.profile).filter { seen.insert($0).inserted }
-    }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 Text("Changes").font(.headline)
-                Picker("", selection: $side) { ForEach(Side.allCases) { Text($0.rawValue).tag($0) } }
+                Picker("", selection: $side) { ForEach(ChangeSide.allCases) { Text($0.rawValue).tag($0) } }
                     .pickerStyle(.segmented).labelsHidden().frame(width: 260)
                 Spacer()
                 Toggle("Technical", isOn: $technical).toggleStyle(.button).buttonStyle(.glass)
@@ -262,90 +354,29 @@ struct DiffSheet: View {
             }
             .padding()
             Divider()
-            if loading {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if technical {
-                technicalView
-            } else if changes.isEmpty {
-                ContentUnavailableView(side == .mine ? "Nothing changed on this Mac" : "Nothing new on GitHub",
-                                       systemImage: "checkmark.circle")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                List {
-                    ForEach(profileNames, id: \.self) { name in
-                        Section {
-                            ForEach(changes.filter { $0.profile == name }) { row($0) }
-                        } header: {
-                            HStack(spacing: 6) {
-                                ProfileChip(name: name)
-                                if state.icon(of: name) != nil { Text(name.capitalized) }
+            if technical {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 18) {
+                        ForEach(raw) { file in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(file.path).font(.subheadline.bold())
+                                DiffText(text: file.text)
                             }
                         }
                     }
+                    .padding()
                 }
+            } else {
+                Form { Section { ChangeList(side: side, onNavigate: { dismiss() }) } }
+                    .formStyle(.grouped)
             }
         }
         .frame(width: 720, height: 560, alignment: .top)
-        .task(id: side) { await load() }
-    }
-
-    private func row(_ change: PlanChange) -> some View {
-        let color: Color = change.kind == .added ? .green : (change.kind == .removed ? .red : .orange)
-        let mark = change.kind == .added ? "plus.circle.fill" : (change.kind == .removed ? "minus.circle.fill" : "pencil.circle.fill")
-        let canOpen = side == .mine && change.prefID != nil
-        return HStack(spacing: 10) {
-            Image(systemName: mark).foregroundStyle(color)
-            Image(systemName: change.symbol).foregroundStyle(.secondary).frame(width: 20)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(change.title)
-                if let detail = change.detail { Text(detail).font(.caption).foregroundStyle(.secondary) }
-            }
-            Spacer()
-            if side == .mine, change.undo != nil {
-                Button {
-                    state.undo(change)
-                    Task { await load() }
-                } label: { Label("Undo", systemImage: "arrow.uturn.backward") }
-                .buttonStyle(.glass).controlSize(.small)
-                .help("Put it back the way it was on GitHub")
-            }
-            if canOpen { Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary) }
+        .task(id: side) {
+            guard let sync = state.sync else { return }
+            let s = side
+            raw = await Task.detached { s == .mine ? sync.localDiff() : sync.incomingDiff() }.value
         }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard canOpen, let id = change.prefID else { return }
-            dismiss()
-            state.reveal(id)
-        }
-    }
-
-    private var technicalView: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 18) {
-                ForEach(raw) { file in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(file.path).font(.subheadline.bold())
-                        DiffText(text: file.text)
-                    }
-                }
-            }
-            .padding()
-        }
-    }
-
-    private func load() async {
-        guard let sync = state.sync else { return }
-        loading = true
-        let side = self.side
-        let folder = AppPaths.normalizeFolder(state.device.configFolder)
-        let result = await Task.detached { () -> ([ProfileDelta], [FileDiff]) in
-            let deltas = AppState.loadDeltas(sync: sync, side: side == .mine ? .mine : .theirs, folder: folder)
-            let raw = side == .mine ? sync.localDiff() : sync.incomingDiff()
-            return (deltas, raw)
-        }.value
-        changes = result.0.flatMap { state.planChanges($0) }
-        raw = result.1
-        loading = false
     }
 }
 
