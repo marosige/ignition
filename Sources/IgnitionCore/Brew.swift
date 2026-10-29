@@ -183,4 +183,12 @@ public enum Mas {
     public static func install(_ id: Int, log: @escaping (String) -> Void) -> ShellResult {
         Shell.run("mas", ["install", String(id)], onLine: log)
     }
+
+    /// `mas uninstall` needs administrator rights.
+    @discardableResult
+    public static func uninstall(_ id: Int) -> ShellResult {
+        let path = Shell.run("which", ["mas"]).out
+        guard !path.isEmpty else { return ShellResult(status: 127, out: "", err: "mas is not installed") }
+        return Shell.runPrivileged("\(Shell.quote(path)) uninstall \(id)")
+    }
 }

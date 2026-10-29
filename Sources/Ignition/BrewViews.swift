@@ -125,6 +125,21 @@ final class BrewStore: ObservableObject {
         if result.ok { for name in removeFrom { remove(p.ref, from: name, state: state) } }
     }
 
+    /// Uninstalls anything Ignition manages from this Mac; `removeFrom` profiles forget it too.
+    func uninstall(_ ref: PackageRef, removeFrom: [String], state: AppState) async {
+        let ok = await Task.detached { () -> Bool in
+            switch ref {
+            case .cask(let t): return Brew.uninstall(BrewPackage(kind: .cask, token: t)) { _ in }.ok
+            case .formula(let t): return Brew.uninstall(BrewPackage(kind: .formula, token: t)) { _ in }.ok
+            case .mas(let id, _): return Mas.uninstall(id).ok
+            case .vscode(let t): return Shell.run("code", ["--uninstall-extension", t]).ok
+            }
+        }.value
+        await refreshEverything()
+        if ok { for name in removeFrom { remove(ref, from: name, state: state) } }
+        else { state.errorMessage = "Could not uninstall \(ref.title)." }
+    }
+
     // MARK: Profiles
 
     /// Profiles that list the package: the ones on this Mac first, then the rest.
@@ -231,6 +246,43 @@ struct PackagePill: View {
     }
 }
 
+// MARK: - Uninstall button for lists
+
+/// Trash button with the same question everywhere: remove from this Mac, and from the profiles?
+struct UninstallButton: View {
+    @EnvironmentObject var state: AppState
+    @EnvironmentObject var store: BrewStore
+    let ref: PackageRef
+    var assumeInstalled = false
+    @State private var confirm = false
+
+    var body: some View {
+        let installed = assumeInstalled || store.isInstalled(ref)
+        let activeHave = store.profiles(containing: ref, state: state).filter { state.layers.contains($0) }
+        if installed {
+            Button { confirm = true } label: { Image(systemName: "trash") }
+                .buttonStyle(.borderless)
+                .help("Uninstall from this Mac")
+                .confirmationDialog("Uninstall \(ref.title) from this Mac?", isPresented: $confirm) {
+                    if activeHave.isEmpty {
+                        Button("Uninstall", role: .destructive) {
+                            Task { await store.uninstall(ref, removeFrom: [], state: state) }
+                        }
+                    } else {
+                        Button("Uninstall and remove from \(activeHave.map(\.capitalized).joined(separator: ", "))", role: .destructive) {
+                            Task { await store.uninstall(ref, removeFrom: activeHave, state: state) }
+                        }
+                        Button("Uninstall, keep in profiles", role: .destructive) {
+                            Task { await store.uninstall(ref, removeFrom: [], state: state) }
+                        }
+                    }
+                } message: {
+                    Text(activeHave.isEmpty ? "It is not in any profile on this Mac." : "If it stays in a profile, the next Apply installs it again.")
+                }
+        }
+    }
+}
+
 // MARK: - Discover
 
 struct BrewDiscoverView: View {
@@ -305,6 +357,7 @@ struct PackageRow: View {
             Spacer()
             if installed {
                 Label("Installed", systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.green)
+                UninstallButton(ref: package.ref, assumeInstalled: true)
             }
         }
         .padding(.vertical, 2)
@@ -365,6 +418,7 @@ struct BrewInstalledView: View {
             }
             Spacer()
             PackagePills(ref: p.ref, comment: p.desc)
+            UninstallButton(ref: p.ref, assumeInstalled: true)
         }
     }
 }
@@ -581,6 +635,7 @@ struct BrewfileView: View {
             if onThisMac {
                 if installed {
                     Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).help("Installed on this Mac")
+                    UninstallButton(ref: ref, assumeInstalled: true)
                 } else if let pkg = brewPackage(ref) {
                     Button("Install") { Task { await store.install(pkg, addTo: nil, state: state) } }
                         .buttonStyle(.glass).controlSize(.small)
@@ -644,6 +699,7 @@ struct AppStoreView: View {
                         Text(m.name)
                         Spacer()
                         PackagePills(ref: .mas(m.id, m.name))
+                        UninstallButton(ref: .mas(m.id, m.name), assumeInstalled: true)
                     }
                 }
             }
@@ -654,6 +710,9 @@ struct AppStoreView: View {
             let q = query
             Task { results = await Task.detached { Mas.search(q) }.value }
         }
-        .task { installed = await Task.detached { Mas.installed() }.value }
+        .task {
+            installed = await Task.detached { Mas.installed() }.value
+            await store.refreshEverything()
+        }
     }
 }
