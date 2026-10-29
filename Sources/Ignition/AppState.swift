@@ -1,5 +1,22 @@
 import SwiftUI
+import AppKit
 import IgnitionCore
+
+/// Native-looking password dialog; works from any thread.
+func promptForPassword(retry: Bool) -> String? {
+    let ask: () -> String? = {
+        let alert = NSAlert()
+        alert.messageText = retry ? "That password was not accepted" : "Ignition needs your password"
+        alert.informativeText = "It is needed to change system-wide settings. Ignition asks once and keeps it in memory only until you quit the app."
+        let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
+        alert.accessoryView = field
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Cancel")
+        alert.window.initialFirstResponder = field
+        return alert.runModal() == .alertFirstButtonReturn ? field.stringValue : nil
+    }
+    return Thread.isMainThread ? ask() : DispatchQueue.main.sync(execute: ask)
+}
 
 /// One profile that sets a preference.
 struct PrefOrigin: Identifiable {
@@ -40,6 +57,7 @@ final class AppState: ObservableObject {
     private var restartTask: Task<Void, Never>?
 
     init() {
+        Privileged.passwordProvider = promptForPassword
         let device = ConfigStore.loadDevice()
         self.device = device
         self.token = Keychain.load(account: "github-token") ?? ""

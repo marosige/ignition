@@ -25,6 +25,7 @@ public enum Shell {
         _ args: [String] = [],
         env: [String: String] = [:],
         cwd: URL? = nil,
+        input: String? = nil,
         onLine: ((String) -> Void)? = nil
     ) -> ShellResult {
         let process = Process()
@@ -35,6 +36,8 @@ public enum Shell {
         process.environment = merged
         if let cwd { process.currentDirectoryURL = cwd }
 
+        let inPipe = Pipe()
+        if input != nil { process.standardInput = inPipe }
         let outPipe = Pipe()
         let errPipe = Pipe()
         process.standardOutput = outPipe
@@ -77,6 +80,10 @@ public enum Shell {
         } catch {
             return ShellResult(status: 127, out: "", err: "\(error.localizedDescription)")
         }
+        if let input {
+            inPipe.fileHandleForWriting.write(Data(input.utf8))
+            try? inPipe.fileHandleForWriting.close()
+        }
         finished.wait()
         outPipe.fileHandleForReading.readabilityHandler = nil
         errPipe.fileHandleForReading.readabilityHandler = nil
@@ -91,9 +98,15 @@ public enum Shell {
         )
     }
 
-    /// Runs a shell script as administrator (shows the macOS password prompt).
+    /// Runs a shell script as administrator. The password is asked once and kept in memory.
     @discardableResult
     public static func runPrivileged(_ script: String) -> ShellResult {
+        Privileged.run(script)
+    }
+
+    /// Fallback: the system prompt, which asks again on every call.
+    @discardableResult
+    static func runPrivilegedViaOsascript(_ script: String) -> ShellResult {
         let escaped = script
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
