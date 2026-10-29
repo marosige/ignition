@@ -39,8 +39,14 @@ struct ContentView: View {
             SidebarView(selection: Binding(get: { state.destination }, set: { state.navigate(to: $0) }), homebrewExpanded: $homebrewExpanded)
                 .navigationSplitViewColumnWidth(min: 230, ideal: 250, max: 300)
         } detail: {
-            NavigationStack(path: $state.path) {
-                DetailRouter(destination: state.destination ?? .overview)
+            // Package pages replace the section instead of being pushed, so only the
+            // toolbar's own back/forward buttons exist.
+            Group {
+                if let package = state.path.last {
+                    PackageDetailView(package: package)
+                } else {
+                    DetailRouter(destination: state.destination ?? .overview)
+                }
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 if !state.editingIsActive { InactiveProfileBanner() }

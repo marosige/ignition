@@ -346,7 +346,11 @@ struct BrewDiscoverView: View {
                 ContentUnavailableView.search(text: query)
             } else {
                 List(results) { p in
-                    NavigationLink(value: p) { PackageRow(package: p, installed: store.installedIDs.contains(p.id)) }
+                    Button { state.path.append(p) } label: {
+                        PackageRow(package: p, installed: store.installedIDs.contains(p.id))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -358,7 +362,6 @@ struct BrewDiscoverView: View {
                     .pickerStyle(.segmented)
             }
         }
-        .navigationDestination(for: BrewPackage.self) { PackageDetailView(package: $0) }
         .task {
             await store.loadCatalog()
             await store.refreshInstalled()
@@ -429,7 +432,6 @@ struct BrewInstalledView: View {
         }
         .navigationTitle("Installed")
         .searchable(text: $query, placement: .toolbar)
-        .navigationDestination(for: BrewPackage.self) { PackageDetailView(package: $0) }
         .toolbar {
             ToolbarItemGroup {
                 Toggle(isOn: $onlyUnplanned) { Label("Not in a profile", systemImage: "line.3.horizontal.decrease") }
@@ -442,7 +444,7 @@ struct BrewInstalledView: View {
 
     private func row(_ p: BrewPackage) -> some View {
         HStack {
-            NavigationLink(value: p) {
+            Button { state.path.append(p) } label: {
                 VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: 6) {
                         Image(systemName: p.kind == .cask ? "app.fill" : "terminal.fill")
@@ -451,7 +453,9 @@ struct BrewInstalledView: View {
                     }
                     Text(p.desc).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
             Spacer()
             PackagePills(ref: p.ref, comment: p.desc)
             UninstallButton(ref: p.ref, assumeInstalled: true)
