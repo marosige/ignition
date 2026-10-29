@@ -59,29 +59,45 @@ struct PreferenceRow: View {
         }
     }
 
+    /// Value differs from the default but no profile has it: a "+" pill to add it.
     @ViewBuilder
     private func notInProfile(_ origins: [PrefOrigin]) -> some View {
         if origins.isEmpty, state.editingIsActive, def.osDefault != nil, state.value(for: def) != def.osDefault {
-            Text("Not in profile").font(.caption2.weight(.semibold)).foregroundStyle(.orange)
             addToProfile
         }
     }
 
-    /// One button for a single active profile, a menu when there are several.
+    /// One "+" pill for a single active profile, a menu of profiles when there are several.
     @ViewBuilder
     private var addToProfile: some View {
         let names = state.layers
         if names.count == 1, let only = names.first {
-            Button("Add to \(only.capitalized)") { state.adopt(def, into: only) }
-                .buttonStyle(.glass).controlSize(.small)
+            Button { state.adopt(def, into: only) } label: { plusPill }
+                .buttonStyle(.plain)
+                .help("Not in a profile yet – add to \(only.capitalized)")
         } else if names.count > 1 {
-            Menu("Add to profile") {
+            Menu {
                 ForEach(names, id: \.self) { name in
-                    Button(name.capitalized) { state.adopt(def, into: name) }
+                    Button { state.adopt(def, into: name) } label: {
+                        Label(name.capitalized, systemImage: state.icon(of: name) ?? "square.stack.3d.up")
+                    }
                 }
-            }
-            .menuStyle(.button).buttonStyle(.glass).controlSize(.small).fixedSize()
+            } label: { plusPill }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Not in a profile yet – add to a profile")
         }
+    }
+
+    private var plusPill: some View {
+        Image(systemName: "plus")
+            .font(.system(size: 9, weight: .bold))
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Color.orange.opacity(0.2), in: .capsule)
+            .overlay(Capsule().strokeBorder(Color.orange.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
+            .foregroundStyle(.orange)
     }
 
     @ViewBuilder
