@@ -66,7 +66,8 @@ public enum PrefValue: Codable, Equatable, Hashable {
 // MARK: - Dock
 
 public struct DockItem: Codable, Equatable, Identifiable, Hashable {
-    public enum Kind: String, Codable { case app, spacer, folder }
+    /// `spacer` is the small one (the original); `largeSpacer` is the full-size gap.
+    public enum Kind: String, Codable { case app, spacer, largeSpacer, folder }
     public var id = UUID()
     public var kind: Kind
     public var path: String?
@@ -79,7 +80,7 @@ public struct DockItem: Codable, Equatable, Identifiable, Hashable {
     }
 
     public var title: String {
-        guard let path else { return "Spacer" }
+        guard let path else { return kind == .largeSpacer ? "Large spacer" : "Small spacer" }
         return ((path as NSString).lastPathComponent as NSString).deletingPathExtension
     }
 }

@@ -13,7 +13,7 @@ public enum Setup {
             guard let list = CFPreferencesCopyAppValue(key as CFString, "com.apple.dock" as CFString) as? [[String: Any]] else { return [] }
             return list.compactMap { entry in
                 let type = entry["tile-type"] as? String ?? ""
-                if type.contains("spacer") { return DockItem(kind: .spacer) }
+                if type.contains("spacer") { return DockItem(kind: type.contains("small") ? .spacer : .largeSpacer) }
                 guard let data = entry["tile-data"] as? [String: Any],
                       let file = data["file-data"] as? [String: Any],
                       let urlString = file["_CFURLString"] as? String,
@@ -36,8 +36,11 @@ public enum Setup {
         for item in items {
             switch item.kind {
             case .spacer:
-                log("adding [ ]")
+                log("adding small spacer")
                 dockutil(["--add", "", "--type", "small-spacer", "--section", "apps"])
+            case .largeSpacer:
+                log("adding large spacer")
+                dockutil(["--add", "", "--type", "spacer", "--section", "apps"])
             case .app:
                 guard let path = item.path else { continue }
                 if !FileManager.default.fileExists(atPath: path) { log("skipping \(item.title) (not installed)"); continue }

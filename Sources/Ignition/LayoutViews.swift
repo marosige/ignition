@@ -81,7 +81,10 @@ struct DockEditorView: View {
                         switch item.kind {
                         case .spacer:
                             Image(systemName: "rectangle.split.2x1").frame(width: 28)
-                            Text("Spacer").foregroundStyle(.secondary)
+                            Text("Small spacer").foregroundStyle(.secondary)
+                        case .largeSpacer:
+                            Image(systemName: "rectangle.split.3x1").frame(width: 28)
+                            Text("Large spacer").foregroundStyle(.secondary)
                         case .app:
                             AppIcon(path: item.path ?? "")
                             VStack(alignment: .leading) {
@@ -96,6 +99,11 @@ struct DockEditorView: View {
                             Text("stack").font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
+                        Button {
+                            update { $0.removeAll { $0.id == item.id } }
+                        } label: { Image(systemName: "minus.circle") }
+                        .buttonStyle(.borderless)
+                        .help("Remove from the Dock layout")
                     }
                 }
                 .onMove { from, to in update { $0.move(fromOffsets: from, toOffset: to) } }
@@ -112,7 +120,8 @@ struct DockEditorView: View {
             ToolbarItemGroup {
                 Menu {
                     Button("App…") { showPicker = true }
-                    Button("Spacer") { update { $0.append(DockItem(kind: .spacer)) } }
+                    Button("Small spacer") { update { $0.append(DockItem(kind: .spacer)) } }
+                    Button("Large spacer") { update { $0.append(DockItem(kind: .largeSpacer)) } }
                     Button("Folder…") { pickFolder() }
                 } label: { Label("Add", systemImage: "plus") }
                 Button { update { $0 = Setup.currentDock() } } label: {
