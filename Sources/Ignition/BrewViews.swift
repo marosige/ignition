@@ -162,7 +162,10 @@ struct PackagePills: View {
 
     var body: some View {
         let have = store.profiles(containing: ref, state: state)
-        let missing = state.profileNames.filter { !have.contains($0) }
+        // Profiles that build on one that already has the package get it from there.
+        let missing = state.profileNames.filter { name in
+            !have.contains(name) && !state.resolve([name]).contains(where: have.contains)
+        }
         HStack(spacing: 5) {
             ForEach(have, id: \.self) { name in
                 if editable {
