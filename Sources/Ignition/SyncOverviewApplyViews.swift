@@ -181,7 +181,7 @@ struct ApplyView: View {
                         .padding(10)
                         .id("end")
                 }
-                .background(.black.opacity(0.06), in: .rect(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(.quaternary))
                 .padding([.horizontal, .bottom])
                 .onChange(of: output.count) { _, _ in proxy.scrollTo("end", anchor: .bottom) }
             }
