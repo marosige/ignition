@@ -84,8 +84,6 @@ struct PreferencesView: View {
 struct PreferenceRow: View {
     @EnvironmentObject var state: AppState
     let def: PreferenceDef
-    /// Value to add when the setting is not in any profile yet.
-    @State private var draft: PrefValue?
 
     var body: some View {
         let origins = state.origins(for: def)
@@ -118,12 +116,7 @@ struct PreferenceRow: View {
             if let owner {
                 PrefValueControl(def: def, value: owner.value) { state.set(def, to: $0, in: owner.profile) }
             } else {
-                let value = draft ?? state.initialValue(def)
-                HStack(spacing: 10) {
-                    PrefValueControl(def: def, value: value) { draft = $0 }
-                        .opacity(0.8)
-                    AddSettingMenu(def: def, value: value)
-                }
+                AddSettingMenu(def: def, value: state.initialValue(def))
             }
         }
         .padding(.vertical, 3)
