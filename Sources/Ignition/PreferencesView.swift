@@ -39,17 +39,11 @@ struct PreferenceRow: View {
     var body: some View {
         let origins = state.origins(for: def)
         LabeledContent {
-            HStack(spacing: 8) {
-                defaultHint
-                control
-                ResetButton(def: def, origins: origins)
-                    .frame(width: 24)
-            }
+            control
         } label: {
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(def.title)
-                    OriginPills(def: def, origins: origins)
                     if def.scope == .system {
                         Image(systemName: "lock").font(.caption).foregroundStyle(.secondary)
                             .help("Needs administrator rights")
@@ -58,35 +52,25 @@ struct PreferenceRow: View {
                 if let detail = def.detail {
                     Text(detail).font(.caption).foregroundStyle(.secondary)
                 }
-                statusLine(origins)
+                metaLine(origins)
             }
         }
     }
 
+    /// Where the value comes from, and the way back to the macOS default.
     @ViewBuilder
-    private func statusLine(_ origins: [PrefOrigin]) -> some View {
-        let current = state.value(for: def)
-        if origins.isEmpty, current != def.osDefault, def.osDefault != nil, state.editingIsActive {
-            HStack(spacing: 8) {
-                Text("Not in profile").font(.caption).foregroundStyle(.orange)
-                addToProfile
+    private func metaLine(_ origins: [PrefOrigin]) -> some View {
+        let notInProfile = origins.isEmpty && state.editingIsActive
+            && def.osDefault != nil && state.value(for: def) != def.osDefault
+        if !origins.isEmpty || notInProfile {
+            HStack(spacing: 6) {
+                OriginPills(def: def, origins: origins)
+                if notInProfile {
+                    Text("Not in profile").font(.caption2.weight(.semibold)).foregroundStyle(.orange)
+                    addToProfile
+                }
+                DefaultPill(def: def, origins: origins)
             }
-        }
-    }
-
-    /// The macOS default, right next to the control, only when the value differs from it.
-    @ViewBuilder
-    private var defaultHint: some View {
-        if def.osDefault != nil, state.value(for: def) != def.osDefault {
-            HStack(spacing: 3) {
-                Image(systemName: "apple.logo")
-                Text(state.defaultText(def))
-            }
-            .font(.caption2.weight(.medium))
-            .padding(.horizontal, 7).padding(.vertical, 2)
-            .background(Color.secondary.opacity(0.15), in: .capsule)
-            .foregroundStyle(.secondary)
-            .help("macOS default")
         }
     }
 
@@ -188,24 +172,34 @@ struct OriginPills: View {
     }
 }
 
-/// Always occupies its slot so rows don't shift; asks before resetting.
-struct ResetButton: View {
+/// Shows the macOS default; clicking it resets the setting (after asking).
+struct DefaultPill: View {
     @EnvironmentObject var state: AppState
     let def: PreferenceDef
     let origins: [PrefOrigin]
     @State private var asking = false
 
     var body: some View {
-        if origins.isEmpty {
-            Color.clear
-        } else {
-            let inEditing = state.isManagedByEditing(def)
-            Button { asking = true } label: { Image(systemName: "arrow.counterclockwise") }
-                .buttonStyle(.borderless)
-                .disabled(!inEditing)
-                .help(inEditing ? "Reset to the macOS default…"
-                      : "Saved in \(origins.map { $0.profile.capitalized }.joined(separator: ", ")). Switch “Saving to” in the toolbar to reset it.")
-                .popover(isPresented: $asking, arrowEdge: .bottom) { confirm }
+        let current = state.value(for: def)
+        let inEditing = state.isManagedByEditing(def)
+        let differs = def.osDefault != nil && current != def.osDefault
+        let canReset = inEditing || (origins.isEmpty && differs && state.editingIsActive)
+        if differs || inEditing {
+            Button { asking = true } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "apple.logo")
+                    Text(differs ? state.defaultText(def) : "Default")
+                    if canReset { Image(systemName: "arrow.counterclockwise").font(.system(size: 8, weight: .bold)) }
+                }
+                .font(.caption2.weight(.medium))
+                .padding(.horizontal, 7).padding(.vertical, 2)
+                .background(Color.secondary.opacity(0.15), in: .capsule)
+                .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .disabled(!canReset)
+            .help(canReset ? "macOS default – click to reset" : "macOS default")
+            .popover(isPresented: $asking, arrowEdge: .bottom) { confirm }
         }
     }
 
@@ -225,8 +219,10 @@ struct ResetButton: View {
                     }
                 }
             }
-            Text("It is removed from the \(state.device.editingProfile.capitalized) profile.")
-                .font(.caption).foregroundStyle(.secondary)
+            if state.isManagedByEditing(def) {
+                Text("It is removed from the \(state.device.editingProfile.capitalized) profile.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             HStack {
                 Spacer()
                 Button("Cancel") { asking = false }
