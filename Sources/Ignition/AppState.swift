@@ -29,7 +29,6 @@ struct PrefOrigin: Identifiable {
     var id: String { profile }
 }
 
-@MainActor
 /// One file that both sides changed, with what each side did in plain terms.
 struct ConflictInfo: Identifiable {
     let file: String

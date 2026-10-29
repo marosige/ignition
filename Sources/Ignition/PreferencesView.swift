@@ -109,7 +109,7 @@ struct PreferenceRow: View {
                             .foregroundStyle(.orange)
                             .help("This Mac has a value that differs from the default, but no profile has it. Use Add to save it.")
                     }
-                    SaveToProfileMenu(def: def, value: live, labelled: owner == nil)
+                    SaveToProfileMenu(def: def, value: live ?? state.initialValue(def), labelled: owner == nil)
                 }
                 if let detail = def.detail {
                     Text(detail).font(.caption).foregroundStyle(.secondary)
