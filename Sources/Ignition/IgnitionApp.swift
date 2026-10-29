@@ -230,7 +230,7 @@ struct ProfileMenu: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: 22, height: 22)
-                    .background(state.color(of: state.device.editingProfile), in: .circle)
+                    .background(state.profileColor(of: state.device.editingProfile).solid, in: .circle)
                 Text(state.device.editingProfile.capitalized)
             }
         }

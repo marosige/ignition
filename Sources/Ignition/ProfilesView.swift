@@ -151,7 +151,7 @@ struct ProfileRow: View {
         let on = state.layers.contains(name)
         let needed = state.requiredBy(name)
         let packages = profile.packages.brews.count + profile.packages.casks.count + profile.packages.mas.count
-        let selectedColor = ProfileColor.allCases.first { $0.color == state.color(of: name) }
+        let selectedColor = state.profileColor(of: name)
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {

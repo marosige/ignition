@@ -115,11 +115,13 @@ final class AppState: ObservableObject {
     var editingIsActive: Bool { layers.contains(device.editingProfile) }
     var activeProfiles: [Profile] { layers.compactMap { profiles[$0] } }
     /// The colour of a profile: its own choice, else one picked by position.
-    func color(of name: String) -> Color {
-        if let raw = profiles[name]?.color, let chosen = ProfileColor(rawValue: raw) { return chosen.color }
+    func profileColor(of name: String) -> ProfileColor {
+        if let raw = profiles[name]?.color, let chosen = ProfileColor.stored(raw) { return chosen }
         let index = profileNames.firstIndex(of: name) ?? 0
-        return ProfileColor.allCases[index % ProfileColor.allCases.count].color
+        return ProfileColor.allCases[index % ProfileColor.allCases.count]
     }
+
+    func color(of name: String) -> Color { profileColor(of: name).color }
 
     /// SF Symbol of a profile, or nil when its name should be shown.
     func icon(of name: String) -> String? {
