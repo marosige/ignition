@@ -267,8 +267,24 @@ final class AppState: ObservableObject {
         .sorted { ($0.def.category.title, $0.def.title) < ($1.def.category.title, $1.def.title) }
     }
 
+    /// Stable fingerprint of everything the switched-on profiles plan for this Mac.
+    var planFingerprint: String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = (try? encoder.encode(effective)) ?? Data()
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for byte in data { hash ^= UInt64(byte); hash = hash &* 1_099_511_628_211 }
+        return String(hash, radix: 16)
+    }
+
+    /// The plan was edited (or never applied) since the last Apply.
+    var needsApply: Bool {
+        device.lastApplied == nil || device.lastAppliedPlan != planFingerprint || !pending.isEmpty
+    }
+
     func markApplied() {
         device.lastApplied = Date()
+        device.lastAppliedPlan = planFingerprint
         saveDevice()
     }
 

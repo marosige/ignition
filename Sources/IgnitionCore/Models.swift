@@ -268,11 +268,13 @@ public struct DeviceConfig: Codable, Equatable {
     public var editingProfile: String = "base"
     /// When the plan was last applied to this Mac (nil: never).
     public var lastApplied: Date?
+    /// Fingerprint of the plan that was applied, to notice later edits.
+    public var lastAppliedPlan: String?
 
     public init(deviceName: String) { self.deviceName = deviceName }
 
     enum CodingKeys: String, CodingKey {
-        case deviceName, repository, configFolder, branch, activeProfiles, editingProfile, lastApplied
+        case deviceName, repository, configFolder, branch, activeProfiles, editingProfile, lastApplied, lastAppliedPlan
     }
 
     public init(from decoder: Decoder) throws {
@@ -284,5 +286,6 @@ public struct DeviceConfig: Codable, Equatable {
         activeProfiles = try c.decodeIfPresent([String].self, forKey: .activeProfiles) ?? ["base"]
         editingProfile = try c.decodeIfPresent(String.self, forKey: .editingProfile) ?? "base"
         lastApplied = try c.decodeIfPresent(Date.self, forKey: .lastApplied)
+        lastAppliedPlan = try c.decodeIfPresent(String.self, forKey: .lastAppliedPlan)
     }
 }

@@ -257,11 +257,19 @@ struct ApplyButton: View {
     @EnvironmentObject var state: AppState
 
     var body: some View {
+        let needs = state.needsApply
         let count = state.pending.count
         Button { state.navigate(to: .apply) } label: {
-            Label(count > 0 ? "Apply (\(count))" : "Apply", systemImage: "play.fill")
+            Label {
+                Text(needs ? (count > 0 ? "Apply (\(count))" : "Apply") : "Applied")
+            } icon: {
+                Image(systemName: needs ? "play.circle.fill" : "checkmark.circle.fill")
+                    .foregroundStyle(needs ? Color.orange : Color.green)
+            }
         }
-        .help(count > 0 ? "\(count) settings differ from the plan – review and apply" : "Apply the plan to this Mac")
+        .help(needs
+              ? "The plan has changes that are not on this Mac yet – review and apply"
+              : "This Mac matches the plan")
     }
 }
 
