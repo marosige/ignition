@@ -109,19 +109,14 @@ struct PreferenceRow: View {
                             .foregroundStyle(.orange)
                             .help("This Mac has a value that differs from the default, but no profile has it. Use Add to save it.")
                     }
-                    if owner != nil {
-                        SaveToProfileMenu(def: def, value: live, pill: true)
-                    }
+                    SaveToProfileMenu(def: def, value: live, labelled: owner == nil)
                 }
                 if let detail = def.detail {
                     Text(detail).font(.caption).foregroundStyle(.secondary)
                 }
             }
             Spacer(minLength: 12)
-            HStack(spacing: 10) {
-                PrefValueControl(def: def, value: live) { state.applyLive(def, $0) }
-                if owner == nil { SaveToProfileMenu(def: def, value: live, pill: false) }
-            }
+            PrefValueControl(def: def, value: live) { state.applyLive(def, $0) }
         }
         .padding(.vertical, 3)
         .padding(.horizontal, 6)
@@ -199,17 +194,18 @@ struct CommitTextField: View {
 
 // MARK: - Adding
 
-/// Saves this Mac's value into a profile: "Add" the first time, a "+" pill afterwards (saving again updates it).
+/// The "+" pill next to a setting's name: saves this Mac's value into a profile.
+/// Says "Add" while the setting is in no profile; afterwards it is just "+" (saving again updates).
 struct SaveToProfileMenu: View {
     @EnvironmentObject var state: AppState
     let def: PreferenceDef
     let value: PrefValue
-    let pill: Bool
+    let labelled: Bool
 
     var body: some View {
         let have = state.origins(for: def).map(\.profile)
         Menu {
-            Section(pill ? "Save this Mac's value to" : "Add to profile") {
+            Section(labelled ? "Add to profile" : "Save this Mac's value to") {
                 ForEach(state.profileNames, id: \.self) { name in
                     Button {
                         state.set(def, to: value, in: name)
@@ -220,23 +216,21 @@ struct SaveToProfileMenu: View {
                 }
             }
         } label: {
-            if pill {
-                Image(systemName: "plus")
-                    .font(.system(size: 9, weight: .bold))
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(Color.secondary.opacity(0.15), in: .capsule)
-                    .overlay(Capsule().strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
-                    .foregroundStyle(.secondary)
-            } else {
-                Label("Add", systemImage: "plus")
+            HStack(spacing: 3) {
+                Image(systemName: "plus").font(.system(size: 9, weight: .bold))
+                if labelled { Text("Add").font(.caption2.weight(.semibold)) }
             }
+            .padding(.horizontal, labelled ? 9 : 8).padding(.vertical, 3)
+            .background(Color.secondary.opacity(0.15), in: .capsule)
+            .overlay(Capsule().strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
+            .foregroundStyle(.secondary)
         }
         .menuStyle(.button)
-        .buttonStyle(pill ? .plain : .glass)
+        .buttonStyle(.plain)
         .menuIndicator(.hidden)
-        .controlSize(.small)
         .fixedSize()
-        .help("Save \(state.formatted(def, value)) (this Mac now) into a profile")
+        .help(labelled ? "Add \(state.formatted(def, value)) (this Mac now) to a profile"
+                       : "Save \(state.formatted(def, value)) (this Mac now) into a profile, or update it")
     }
 }
 
