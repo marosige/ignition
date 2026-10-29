@@ -193,10 +193,7 @@ struct DeviceCard: View {
                              ? "Editing \(state.device.editingProfile.capitalized)"
                              : "Editing \(state.device.editingProfile.capitalized) (not on this Mac)")
                             .fixedSize(horizontal: false, vertical: true)
-                    } icon: {
-                        Image(systemName: state.icon(of: state.device.editingProfile) ?? "pencil")
-                            .foregroundStyle(state.color(of: state.device.editingProfile))
-                    }
+                    } icon: { Image(systemName: state.icon(of: state.device.editingProfile) ?? "pencil") }
                         .foregroundStyle(state.editingIsActive ? Color.secondary : Color.orange)
                         .help("Changes you make are saved into this profile")
                 }
@@ -228,14 +225,16 @@ struct ProfileMenu: View {
             Divider()
             Button("Manage Profiles…") { state.navigate(to: .profiles) }
         } label: {
-            Label {
-                Text("Saving to \(state.device.editingProfile.capitalized)")
-            } icon: {
+            HStack(spacing: 7) {
                 Image(systemName: state.icon(of: state.device.editingProfile) ?? "square.stack.3d.up")
-                    .foregroundStyle(state.color(of: state.device.editingProfile))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 22, height: 22)
+                    .background(state.color(of: state.device.editingProfile), in: .circle)
+                Text(state.device.editingProfile.capitalized)
             }
         }
-        .help("Profiles are layered: Base first, then the others on top. Which ones are active on this Mac is set under Profiles.")
+        .help("The profile your changes are saved into")
         .onChange(of: state.device.editingProfile) { _, _ in state.saveDevice() }
     }
 }
