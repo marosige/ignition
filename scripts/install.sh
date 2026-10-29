@@ -3,7 +3,10 @@
 #   bash -c "$(curl -fsSL https://raw.githubusercontent.com/marosige/ignition/main/scripts/install.sh)"
 set -euo pipefail
 
-URL="https://github.com/marosige/ignition/releases/latest/download/Ignition.zip"
+# Newest release, prereleases included (the "latest" shortcut skips them).
+URL="$(curl -fsSL "https://api.github.com/repos/marosige/ignition/releases?per_page=5" \
+  | grep -m1 '"browser_download_url".*Ignition\.zip' | sed 's/.*"\(https[^"]*\)".*/\1/')"
+[ -n "$URL" ] || { echo "No Ignition release found."; exit 1; }
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
