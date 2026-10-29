@@ -40,6 +40,7 @@ struct PreferenceRow: View {
         let origins = state.origins(for: def)
         LabeledContent {
             HStack(spacing: 8) {
+                defaultHint
                 control
                 ResetButton(def: def, origins: origins)
                     .frame(width: 24)
@@ -65,16 +66,26 @@ struct PreferenceRow: View {
     @ViewBuilder
     private func statusLine(_ origins: [PrefOrigin]) -> some View {
         let current = state.value(for: def)
-        let isDefault = current == def.osDefault
-        if !origins.isEmpty {
-            Text(isDefault ? "Default" : "Default: \(state.defaultText(def))")
-                .font(.caption).foregroundStyle(.secondary)
-        } else if !isDefault, def.osDefault != nil, state.editingIsActive {
+        if origins.isEmpty, current != def.osDefault, def.osDefault != nil, state.editingIsActive {
             HStack(spacing: 8) {
-                Text("Not in profile · default: \(state.defaultText(def))")
-                    .font(.caption).foregroundStyle(.orange)
+                Text("Not in profile").font(.caption).foregroundStyle(.orange)
                 addToProfile
             }
+        }
+    }
+
+    /// The macOS default, right next to the control, only when the value differs from it.
+    @ViewBuilder
+    private var defaultHint: some View {
+        if def.osDefault != nil, state.value(for: def) != def.osDefault {
+            Label {
+                Text(state.defaultText(def))
+            } icon: {
+                Image(systemName: "apple.logo")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .help("macOS default")
         }
     }
 
