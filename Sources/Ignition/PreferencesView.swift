@@ -38,9 +38,7 @@ struct PreferenceRow: View {
 
     var body: some View {
         let origins = state.origins(for: def)
-        LabeledContent {
-            control
-        } label: {
+        HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(def.title)
@@ -54,6 +52,8 @@ struct PreferenceRow: View {
                 }
                 metaLine(origins)
             }
+            Spacer(minLength: 12)
+            control
         }
     }
 
