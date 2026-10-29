@@ -471,6 +471,7 @@ struct PackageDetailView: View {
     let package: BrewPackage
     @State private var confirmDelete = false
     @State private var confirmGet = false
+    @State private var appURL: URL?
 
     private var isInstalled: Bool { store.installedIDs.contains(package.id) }
     private var isWorking: Bool { store.working.contains(package.id) }
@@ -479,54 +480,62 @@ struct PackageDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack(spacing: 16) {
-                    Image(systemName: package.kind == .cask ? "app.fill" : "terminal.fill")
-                        .font(.system(size: 34))
-                        .frame(width: 76, height: 76)
-                        .glassEffect(.regular, in: .rect(cornerRadius: 20))
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(package.name).font(.largeTitle.bold())
-                        Text(package.kind == .cask ? "App · cask" : "Command line tool · formula")
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    actions
+            VStack(alignment: .leading, spacing: 22) {
+                header
+                if !package.desc.isEmpty {
+                    Text(package.desc).font(.title3).foregroundStyle(.primary)
                 }
-                Text(package.desc.isEmpty ? "No description." : package.desc).font(.title3)
 
-                GroupBox {
-                    VStack(spacing: 10) {
-                        LabeledContent("On this Mac") {
-                            Label(isInstalled ? "Installed" : "Not installed",
-                                  systemImage: isInstalled ? "checkmark.circle.fill" : "circle.dashed")
-                                .foregroundStyle(isInstalled ? Color.green : Color.secondary)
-                        }
-                        LabeledContent("In profiles") { PackagePills(ref: package.ref, comment: package.desc) }
-                        LabeledContent("Token") { Text(package.token).textSelection(.enabled) }
-                        if !package.version.isEmpty { LabeledContent("Version") { Text(package.version) } }
-                        if let url = URL(string: package.homepage), !package.homepage.isEmpty {
-                            LabeledContent("Website") { Link(package.homepage, destination: url) }
+                card("Details") {
+                    detailRow("On this Mac") {
+                        Label(isInstalled ? "Installed" : "Not installed",
+                              systemImage: isInstalled ? "checkmark.circle.fill" : "circle.dashed")
+                            .foregroundStyle(isInstalled ? Color.green : Color.secondary)
+                    }
+                    detailRow("Kind") { Text(package.kind == .cask ? "App (cask)" : "Command line tool (formula)") }
+                    detailRow("Token") { Text(package.token).textSelection(.enabled).font(.body.monospaced()) }
+                    if !package.version.isEmpty { detailRow("Version") { Text(package.version) } }
+                    if let url = URL(string: package.homepage), !package.homepage.isEmpty {
+                        detailRow("Website") {
+                            Link(destination: url) { Label(url.host() ?? package.homepage, systemImage: "arrow.up.forward.square") }
                         }
                     }
-                    .padding(4)
+                }
+
+                card("Profiles") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        PackagePills(ref: package.ref, comment: package.desc)
+                        Text(package.ref.isIgnitionTool
+                             ? "Ignition installs this itself – no profile needed."
+                             : "Profiles that list it get it installed by Apply. Click a pill to remove it, + to add it to another profile.")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 6)
                 }
 
                 if let lines = store.logs[package.id], !lines.isEmpty {
-                    GroupBox("Output") {
+                    card("Output") {
                         ScrollView {
                             Text(lines.suffix(200).joined(separator: "\n"))
-                                .font(.caption.monospaced()).frame(maxWidth: .infinity, alignment: .leading)
+                                .font(.callout.monospaced()).frame(maxWidth: .infinity, alignment: .leading)
                                 .textSelection(.enabled)
                         }
-                        .frame(height: 180)
+                        .frame(height: 200)
                     }
                 }
             }
-            .padding(24)
+            .padding(28)
+            .frame(maxWidth: 760, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .center)
         }
         .navigationTitle(package.name)
-        .task { await store.refreshInstalled() }
+        .task(id: isInstalled) {
+            await store.refreshInstalled()
+            if package.kind == .cask, isInstalled {
+                let token = package.token
+                appURL = await Task.detached { Brew.appURL(forCask: token) }.value
+            } else { appURL = nil }
+        }
         .confirmationDialog("Get \(package.name)", isPresented: $confirmGet) {
             ForEach(state.layers, id: \.self) { name in
                 Button("Install and add to \(name.capitalized)") {
@@ -559,12 +568,73 @@ struct PackageDetailView: View {
         }
     }
 
+    private var header: some View {
+        HStack(alignment: .center, spacing: 20) {
+            Group {
+                if let appURL {
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: appURL.path))
+                        .resizable().interpolation(.high)
+                        .frame(width: 88, height: 88)
+                } else {
+                    Image(systemName: package.kind == .cask ? "app.fill" : "terminal.fill")
+                        .font(.system(size: 38))
+                        .foregroundStyle(package.kind == .cask ? Color.accentColor : Color.secondary)
+                        .frame(width: 88, height: 88)
+                        .glassEffect(.regular, in: .rect(cornerRadius: 22))
+                }
+            }
+            VStack(alignment: .leading, spacing: 5) {
+                Text(package.name).font(.system(size: 32, weight: .bold))
+                Text([package.kind == .cask ? "App" : "Command line tool", package.version.isEmpty ? nil : package.version]
+                    .compactMap { $0 }.joined(separator: " · "))
+                    .font(.title3).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 16)
+            actions
+        }
+    }
+
+    private func card<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title).font(.headline)
+            VStack(alignment: .leading, spacing: 0) { content() }
+                .padding(.horizontal, 16).padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .glassEffect(.regular, in: .rect(cornerRadius: 18))
+        }
+    }
+
+    private func detailRow<Value: View>(_ label: String, @ViewBuilder value: () -> Value) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 16) {
+            Text(label).foregroundStyle(.secondary).frame(width: 110, alignment: .leading)
+            value()
+            Spacer(minLength: 0)
+        }
+        .font(.body)
+        .padding(.vertical, 9)
+    }
+
     @ViewBuilder
     private var actions: some View {
         if isWorking {
             ProgressView().controlSize(.large)
         } else if isInstalled {
-            Button("Uninstall", role: .destructive) { confirmDelete = true }.buttonStyle(.glass).controlSize(.large)
+            HStack(spacing: 10) {
+                if let appURL {
+                    Button {
+                        NSWorkspace.shared.open(appURL)
+                    } label: { Label("Open", systemImage: "arrow.up.forward.app") }
+                    .buttonStyle(.glassProminent).controlSize(.large)
+                    Button {
+                        NSWorkspace.shared.activateFileViewerSelecting([appURL])
+                    } label: { Image(systemName: "folder") }
+                    .buttonStyle(.glass).controlSize(.large)
+                    .help("Show in Finder")
+                }
+                if !package.ref.isIgnitionTool {
+                    Button("Uninstall", role: .destructive) { confirmDelete = true }.buttonStyle(.glass).controlSize(.large)
+                }
+            }
         } else {
             Button("Get") {
                 if activeHave.isEmpty { confirmGet = true }

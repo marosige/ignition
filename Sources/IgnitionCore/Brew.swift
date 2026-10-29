@@ -122,6 +122,29 @@ public enum Brew {
         return out.sorted { $0.name.lowercased() < $1.name.lowercased() }
     }
 
+    /// The installed .app of a cask, so it can be opened.
+    public static func appURL(forCask token: String) -> URL? {
+        let r = Shell.run("brew", ["info", "--json=v2", "--cask", token])
+        guard r.ok, let data = r.out.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let cask = (json["casks"] as? [[String: Any]])?.first,
+              let artifacts = cask["artifacts"] as? [[String: Any]] else { return nil }
+        var names: [String] = []
+        for artifact in artifacts {
+            for entry in (artifact["app"] as? [Any]) ?? [] {
+                if let name = entry as? String { names.append(name) }
+            }
+        }
+        let dirs = ["/Applications", expandTilde("~/Applications")]
+        for name in names {
+            for dir in dirs {
+                let path = dir + "/" + (name as NSString).lastPathComponent
+                if FileManager.default.fileExists(atPath: path) { return URL(fileURLWithPath: path) }
+            }
+        }
+        return nil
+    }
+
     // MARK: Actions
 
     @discardableResult
