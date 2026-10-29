@@ -189,7 +189,7 @@ struct PackagePills: View {
                     ProfileChip(name: name, dimmed: !state.layers.contains(name))
                 }
             }
-            if editable, !missing.isEmpty {
+            if editable {
                 Menu {
                     ForEach(missing, id: \.self) { name in
                         Button {
@@ -208,7 +208,10 @@ struct PackagePills: View {
                         .foregroundStyle(.secondary)
                 }
                 .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
-                .help(have.isEmpty ? "Not in any profile – add it to one" : "Add to another profile")
+                .disabled(missing.isEmpty)
+                .opacity(missing.isEmpty ? 0.4 : 1)
+                .help(missing.isEmpty ? "Every profile already has it, directly or through a profile it builds on"
+                      : (have.isEmpty ? "Not in any profile – add it to one" : "Add to another profile"))
             }
         }
     }
