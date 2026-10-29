@@ -48,6 +48,7 @@ struct PreferenceRow: View {
                     }
                     DefaultPill(def: def, origins: origins)
                     OriginPills(def: def, origins: origins)
+                    LivePill(def: def)
                     notInProfile(origins)
                 }
                 if let detail = def.detail {
@@ -62,7 +63,7 @@ struct PreferenceRow: View {
     /// Value differs from the default but no profile has it: a "+" pill to add it.
     @ViewBuilder
     private func notInProfile(_ origins: [PrefOrigin]) -> some View {
-        if origins.isEmpty, state.editingIsActive, def.osDefault != nil, state.value(for: def) != def.osDefault {
+        if origins.isEmpty, def.osDefault != nil, state.liveValue(def) != def.osDefault {
             addToProfile
         }
     }
@@ -74,7 +75,7 @@ struct PreferenceRow: View {
         if names.count == 1, let only = names.first {
             Button { state.adopt(def, into: only) } label: { plusPill }
                 .buttonStyle(.plain)
-                .help("Not in a profile yet – add to \(only.capitalized)")
+                .help("This Mac differs from the default, but no profile says so – add the current value to \(only.capitalized)")
         } else if names.count > 1 {
             Menu {
                 ForEach(names, id: \.self) { name in
@@ -87,7 +88,7 @@ struct PreferenceRow: View {
             .buttonStyle(.plain)
             .menuIndicator(.hidden)
             .fixedSize()
-            .help("Not in a profile yet – add to a profile")
+            .help("This Mac differs from the default, but no profile says so – add the current value to a profile")
         }
     }
 
@@ -240,6 +241,26 @@ struct OriginPill: View {
     }
 }
 
+/// What this Mac has right now, when that is not what the plan says. Apply fixes it.
+struct LivePill: View {
+    @EnvironmentObject var state: AppState
+    let def: PreferenceDef
+
+    var body: some View {
+        if let planned = state.effective.preferences[def.id], state.liveValue(def) != planned {
+            HStack(spacing: 3) {
+                Image(systemName: "laptopcomputer")
+                Text(state.formatted(def, state.liveValue(def)))
+            }
+            .font(.caption2.weight(.medium))
+            .padding(.horizontal, 7).padding(.vertical, 2)
+            .background(Color.orange.opacity(0.18), in: .capsule)
+            .foregroundStyle(.orange)
+            .help("This Mac has \(state.formatted(def, state.liveValue(def))) right now. Apply sets it to \(state.formatted(def, planned)).")
+        }
+    }
+}
+
 /// Shows the macOS default; clicking it resets the setting (after asking).
 struct DefaultPill: View {
     @EnvironmentObject var state: AppState
@@ -251,7 +272,7 @@ struct DefaultPill: View {
         let current = state.value(for: def)
         let inEditing = state.isManagedByEditing(def)
         let differs = def.osDefault != nil && current != def.osDefault
-        let canReset = inEditing || (origins.isEmpty && differs && state.editingIsActive)
+        let canReset = inEditing
         if (differs || inEditing) && def.osDefault != nil {
             Button { asking = true } label: {
                 HStack(spacing: 3) {
@@ -274,7 +295,7 @@ struct DefaultPill: View {
         let current = state.value(for: def)
         let others = origins.filter { $0.profile != state.device.editingProfile }
         return VStack(alignment: .leading, spacing: 10) {
-            Text("Reset “\(def.title)”?").font(.headline)
+            Text("Reset “\(def.title)” in the plan?").font(.headline)
             Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 4) {
                 GridRow { Text("Now").foregroundStyle(.secondary); Text(state.formatted(def, current)).bold() }
                 GridRow {

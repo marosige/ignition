@@ -233,9 +233,43 @@ final class AppState: ObservableObject {
         live = values
     }
 
-    /// What the control should show: profile value, else the Mac's current value, else macOS's default.
+    /// What the edited profile says about a setting: its own value, else what the profiles
+    /// it builds on say. Nil when nothing does.
+    func plannedValue(for def: PreferenceDef) -> PrefValue? {
+        if let v = editing.preferences[def.id] { return v }
+        for name in resolve([device.editingProfile]).dropLast().reversed() {
+            if let v = profiles[name]?.preferences[def.id] { return v }
+        }
+        return nil
+    }
+
+    /// What the control shows: the plan, or the macOS default while the plan is silent.
     func value(for def: PreferenceDef) -> PrefValue? {
-        editing.preferences[def.id] ?? viewEffective.preferences[def.id] ?? live[def.id] ?? def.osDefault
+        plannedValue(for: def) ?? def.osDefault ?? live[def.id]
+    }
+
+    /// What this Mac has right now.
+    func liveValue(_ def: PreferenceDef) -> PrefValue? { live[def.id] ?? def.osDefault }
+
+    struct PendingChange: Identifiable {
+        let def: PreferenceDef
+        let from: PrefValue?
+        let to: PrefValue
+        var id: String { def.id }
+    }
+
+    /// Settings where this Mac differs from what the switched-on profiles plan.
+    var pending: [PendingChange] {
+        effective.preferences.compactMap { id, value in
+            guard let def = PreferenceCatalog.byID[id], liveValue(def) != value else { return nil }
+            return PendingChange(def: def, from: liveValue(def), to: value)
+        }
+        .sorted { ($0.def.category.title, $0.def.title) < ($1.def.category.title, $1.def.title) }
+    }
+
+    func markApplied() {
+        device.lastApplied = Date()
+        saveDevice()
     }
 
     func isManaged(_ def: PreferenceDef) -> Bool {
@@ -276,20 +310,18 @@ final class AppState: ObservableObject {
         def.osDefault == nil ? "decided by macOS" : formatted(def, def.osDefault)
     }
 
-    /// Saves into the profile being edited. Only touches this Mac when that profile is switched on.
+    /// Plans a value in the profile being edited. The Mac only changes when you Apply.
     func set(_ def: PreferenceDef, to value: PrefValue) {
         var p = editing
         p.preferences[def.id] = value
         editing = p
-        applyEffective(def, changed: device.editingProfile)
     }
 
-    /// Drops the setting from the profile; this Mac falls back to what remains, or to the macOS default.
+    /// Takes the value out of the profile being edited.
     func reset(_ def: PreferenceDef) {
         var p = editing
         p.preferences[def.id] = nil
         editing = p
-        applyEffective(def, changed: device.editingProfile)
     }
 
     /// Removes this profile's value for a setting (the one a pill stands for).
@@ -298,29 +330,14 @@ final class AppState: ObservableObject {
         profile.preferences[def.id] = nil
         profiles[name] = profile
         persist(name)
-        applyEffective(def, changed: name)
     }
 
-    /// Puts a value that is only set on this Mac into a profile, without touching the system.
+    /// Puts what this Mac has now into a profile.
     func adopt(_ def: PreferenceDef, into profileName: String) {
         guard var profile = profiles[profileName], let value = live[def.id] ?? def.osDefault else { return }
         profile.preferences[def.id] = value
         profiles[profileName] = profile
         persist(profileName)
-    }
-
-    /// Makes this Mac match what the switched-on profiles say about a setting.
-    private func applyEffective(_ def: PreferenceDef, changed: String) {
-        guard layers.contains(changed) else { return }
-        if let value = effective.preferences[def.id] {
-            let r = DefaultsService.write(def, value)
-            if !r.ok { errorMessage = "\(def.title): \(r.combined)"; return }
-            live[def.id] = value
-        } else {
-            _ = DefaultsService.reset(def)
-            live[def.id] = DefaultsService.read(def)
-        }
-        scheduleRestart(def.restart)
     }
 
     /// Stepper clicks come in bursts; restart Dock/Finder once things settle.

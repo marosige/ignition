@@ -31,6 +31,7 @@ enum Destination: Hashable {
 
 struct ContentView: View {
     @EnvironmentObject var state: AppState
+    @EnvironmentObject var store: BrewStore
     @State private var homebrewExpanded = true
 
     var body: some View {
@@ -53,14 +54,22 @@ struct ContentView: View {
                     .disabled(!state.canGoForward)
             }
             ToolbarItem(placement: .automatic) { ProfileMenu() }
+            ToolbarItem(placement: .automatic) { ApplyButton() }
             ToolbarItem(placement: .automatic) { SyncButton() }
         }
         .sheet(isPresented: $state.showConflicts) { ConflictSheet() }
         .sheet(isPresented: $state.showDiff) { DiffSheet() }
         .sheet(isPresented: $state.showConnection) { ConnectionSheet() }
-        .task { await state.checkSync() }
+        .task {
+            await state.checkSync()
+            await store.refreshInstalled()
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            Task { await state.checkSync() }
+            Task {
+                await state.checkSync()
+                await store.refreshInstalled()   // picks up what you installed from the terminal
+            }
+            state.refreshLive()
         }
         .alert("Something went wrong", isPresented: Binding(
             get: { state.errorMessage != nil },
@@ -111,6 +120,7 @@ struct DetailRouter: View {
 
 struct SidebarView: View {
     @EnvironmentObject var state: AppState
+    @EnvironmentObject var store: BrewStore
     @Binding var selection: Destination?
     @Binding var homebrewExpanded: Bool
 
@@ -128,7 +138,9 @@ struct SidebarView: View {
                 Label("GitHub Sync", systemImage: "arrow.triangle.2.circlepath.icloud")
                     .badge(state.changedFiles.count)
                     .tag(Destination.sync)
-                Label("Apply to this Mac", systemImage: "play.circle").tag(Destination.apply)
+                Label("Apply to this Mac", systemImage: "play.circle")
+                    .badge(state.pending.count)
+                    .tag(Destination.apply)
             }
             Section("Settings") {
                 ForEach(PrefCategory.allCases.filter { !PreferenceCatalog.defs(in: $0).isEmpty }) { c in
@@ -147,7 +159,9 @@ struct SidebarView: View {
             Section("Software") {
                 DisclosureGroup(isExpanded: $homebrewExpanded) {
                     Label("Discover", systemImage: "sparkle.magnifyingglass").tag(Destination.brewDiscover)
-                    Label("Installed", systemImage: "checkmark.circle").tag(Destination.brewInstalled)
+                    Label("Installed", systemImage: "checkmark.circle")
+                        .badge(store.installed.filter { store.profiles(containing: $0.ref, state: state).isEmpty }.count)
+                        .tag(Destination.brewInstalled)
                     Label("Profile Software", systemImage: "list.bullet.rectangle").tag(Destination.brewfile)
                 } label: {
                     Label("Homebrew", systemImage: "mug")
@@ -236,6 +250,18 @@ struct ProfileMenu: View {
         }
         .help("The profile your changes are saved into")
         .onChange(of: state.device.editingProfile) { _, _ in state.saveDevice() }
+    }
+}
+
+struct ApplyButton: View {
+    @EnvironmentObject var state: AppState
+
+    var body: some View {
+        let count = state.pending.count
+        Button { state.navigate(to: .apply) } label: {
+            Label(count > 0 ? "Apply (\(count))" : "Apply", systemImage: "play.fill")
+        }
+        .help(count > 0 ? "\(count) settings differ from the plan – review and apply" : "Apply the plan to this Mac")
     }
 }
 

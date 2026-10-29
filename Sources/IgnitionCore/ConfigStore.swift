@@ -5,12 +5,19 @@ public enum ConfigStore {
     static let encoder: JSONEncoder = {
         let e = JSONEncoder()
         e.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        e.dateEncodingStrategy = .iso8601
         return e
+    }()
+
+    static let deviceDecoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601
+        return d
     }()
 
     public static func loadDevice() -> DeviceConfig {
         if let data = try? Data(contentsOf: AppPaths.device),
-           let device = try? JSONDecoder().decode(DeviceConfig.self, from: data) {
+           let device = try? deviceDecoder.decode(DeviceConfig.self, from: data) {
             AppPaths.configFolder = AppPaths.normalizeFolder(device.configFolder)
             return device
         }

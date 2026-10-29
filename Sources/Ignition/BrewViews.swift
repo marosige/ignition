@@ -373,6 +373,7 @@ struct PackageDetailView: View {
     @EnvironmentObject var state: AppState
     let package: BrewPackage
     @State private var confirmDelete = false
+    @State private var confirmGet = false
 
     private var isInstalled: Bool { store.installedIDs.contains(package.id) }
     private var isWorking: Bool { store.working.contains(package.id) }
@@ -434,6 +435,25 @@ struct PackageDetailView: View {
         }
         .navigationTitle(package.name)
         .task { await store.refreshInstalled() }
+        .confirmationDialog("Get \(package.name)", isPresented: $confirmGet) {
+            let target = state.device.editingProfile
+            let alreadyThere = inProfiles.contains(target)
+            if !alreadyThere && state.editingIsActive {
+                Button("Add to \(target.capitalized) and install now") {
+                    Task { await store.install(package, addTo: target, state: state) }
+                }
+            }
+            if !alreadyThere {
+                Button("Add to \(target.capitalized) only (installs with the next Apply)") {
+                    store.add(package.ref, comment: package.desc, to: target, state: state)
+                }
+            }
+            Button("Install on this Mac only") {
+                Task { await store.install(package, addTo: nil, state: state) }
+            }
+        } message: {
+            Text("Ignition plans your Macs: add it to a profile so every Mac that uses it gets it.")
+        }
         .confirmationDialog("Uninstall \(package.name) from this Mac?", isPresented: $confirmDelete) {
             if activeHave.isEmpty {
                 Button("Uninstall", role: .destructive) {
@@ -469,9 +489,8 @@ struct PackageDetailView: View {
                     .buttonStyle(.glass).controlSize(.large)
                 }
                 Button("Get") {
-                    Task {
-                        await store.install(package, addTo: state.editingIsActive ? state.device.editingProfile : nil, state: state)
-                    }
+                    if activeHave.isEmpty { confirmGet = true }
+                    else { Task { await store.install(package, addTo: nil, state: state) } }
                 }
                 .buttonStyle(.glassProminent).controlSize(.large)
             }

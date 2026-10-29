@@ -266,11 +266,13 @@ public struct DeviceConfig: Codable, Equatable {
     /// Profile names layered in order. `base` should normally come first.
     public var activeProfiles: [String] = ["base"]
     public var editingProfile: String = "base"
+    /// When the plan was last applied to this Mac (nil: never).
+    public var lastApplied: Date?
 
     public init(deviceName: String) { self.deviceName = deviceName }
 
     enum CodingKeys: String, CodingKey {
-        case deviceName, repository, configFolder, branch, activeProfiles, editingProfile
+        case deviceName, repository, configFolder, branch, activeProfiles, editingProfile, lastApplied
     }
 
     public init(from decoder: Decoder) throws {
@@ -281,5 +283,6 @@ public struct DeviceConfig: Codable, Equatable {
         branch = try c.decodeIfPresent(String.self, forKey: .branch) ?? ""
         activeProfiles = try c.decodeIfPresent([String].self, forKey: .activeProfiles) ?? ["base"]
         editingProfile = try c.decodeIfPresent(String.self, forKey: .editingProfile) ?? "base"
+        lastApplied = try c.decodeIfPresent(Date.self, forKey: .lastApplied)
     }
 }

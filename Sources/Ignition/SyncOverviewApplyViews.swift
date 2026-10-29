@@ -35,6 +35,11 @@ struct OverviewView: View {
                     card("This Mac is “\(state.device.deviceName)”",
                          "Active profiles: " + state.layers.map(\.capitalized).joined(separator: " → ") + ". Change settings anywhere in the sidebar, then use Save to GitHub; on your other Macs pull and Apply.",
                          "laptopcomputer", goTo: .sync)
+                    if state.device.lastApplied == nil {
+                        card("Set up this Mac", "Nothing has been applied to this Mac yet. Apply installs your packages, links your dotfiles and sets everything in the plan.", "play.circle", goTo: .apply)
+                    } else if !state.pending.isEmpty {
+                        card("\(state.pending.count) setting\(state.pending.count == 1 ? "" : "s") to apply", "This Mac differs from the plan. Review and apply the changes.", "exclamationmark.circle", goTo: .apply)
+                    }
                     summary
                 }
             }
@@ -119,6 +124,42 @@ struct ApplyView: View {
         VStack(spacing: 0) {
             Form {
                 Section {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(state.device.lastApplied == nil ? "This Mac has not been set up yet" : "Make this Mac match the plan")
+                                .font(.headline)
+                            Text(state.device.lastApplied.map { "Last applied \(ago($0))" }
+                                 ?? "Apply installs your packages, links your dotfiles and sets everything in the plan.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button { Task { await run() } } label: {
+                            if running { ProgressView().controlSize(.small) }
+                            else { Label(state.device.lastApplied == nil ? "Set up this Mac" : "Apply", systemImage: "play.fill") }
+                        }
+                        .buttonStyle(.glassProminent).controlSize(.large)
+                        .disabled(running || selected.isEmpty || !state.hasConfig)
+                    }
+                }
+                let changes = state.pending
+                if !changes.isEmpty {
+                    Section {
+                        ForEach(changes) { change in
+                            HStack {
+                                Text(change.def.title)
+                                Spacer()
+                                Text(state.formatted(change.def, change.from)).foregroundStyle(.secondary)
+                                Image(systemName: "arrow.right").font(.caption).foregroundStyle(.tertiary)
+                                Text(state.formatted(change.def, change.to)).bold()
+                            }
+                        }
+                    } header: {
+                        Text("Settings that will change (\(changes.count))")
+                    } footer: {
+                        Text("Packages, dotfiles, Dock and the rest are checked and fixed while applying.")
+                    }
+                }
+                Section {
                     ForEach(Self.steps, id: \.0) { id, title, icon in
                         HStack {
                             Toggle(isOn: Binding(get: { selected.contains(id) }, set: { on in
@@ -151,15 +192,9 @@ struct ApplyView: View {
                         }
                     } header: { Text("Do by hand") } footer: { Text("macOS does not allow scripts to change these.") }
                 }
-                Section {
-                    Button { Task { await run() } } label: {
-                        if running { ProgressView().controlSize(.small) } else { Text("Apply selected") }
-                    }
-                    .buttonStyle(.glassProminent).disabled(running || selected.isEmpty || !state.hasConfig)
-                }
             }
             .formStyle(.grouped)
-            .frame(maxHeight: 420)
+            .frame(maxHeight: 480)
 
             ScrollViewReader { proxy in
                 ScrollView {
@@ -207,6 +242,7 @@ struct ApplyView: View {
             output.append(ok ? "✓ \(title) done\n" : "✗ \(title) had problems\n")
         }
         state.refreshLive()
+        if results.values.contains(true) { state.markApplied() }
         running = false
     }
 }
