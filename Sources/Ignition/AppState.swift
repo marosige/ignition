@@ -121,6 +121,19 @@ final class AppState: ObservableObject {
         return ProfileColor.allCases[index % ProfileColor.allCases.count].color
     }
 
+    /// SF Symbol of a profile, or nil when its name should be shown.
+    func icon(of name: String) -> String? {
+        guard let icon = profiles[name]?.icon, !icon.isEmpty else { return nil }
+        return icon
+    }
+
+    func setIcon(_ symbol: String?, of name: String) {
+        guard var p = profiles[name] else { return }
+        p.icon = symbol
+        profiles[name] = p
+        persist(name)
+    }
+
     func setColor(_ color: ProfileColor, of name: String) {
         guard var p = profiles[name] else { return }
         p.color = color.rawValue

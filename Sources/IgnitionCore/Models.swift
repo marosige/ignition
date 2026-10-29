@@ -192,11 +192,13 @@ public struct Profile: Codable, Equatable {
     public var extends: String?
     /// Colour name used for this profile's pills and icon (see ProfileColor in the app).
     public var color: String?
+    /// SF Symbol shown instead of the profile name. Empty means the name is shown.
+    public var icon: String?
 
     public init(title: String = "") { self.title = title }
 
     enum CodingKeys: String, CodingKey {
-        case title, preferences, dock, finderSidebar, directories, packages, startup, copyFiles, manualNotes, extends, color
+        case title, preferences, dock, finderSidebar, directories, packages, startup, copyFiles, manualNotes, extends, color, icon
     }
 
     public init(from decoder: Decoder) throws {
@@ -212,6 +214,7 @@ public struct Profile: Codable, Equatable {
         manualNotes = try c.decodeIfPresent([String: String].self, forKey: .manualNotes) ?? [:]
         extends = try c.decodeIfPresent(String.self, forKey: .extends)
         color = try c.decodeIfPresent(String.self, forKey: .color)
+        icon = try c.decodeIfPresent(String.self, forKey: .icon)
     }
 
     /// Layers profiles in order; later ones win.

@@ -114,5 +114,6 @@
     ],
     "vscode": []
   },
-  "extends": "base"
+  "extends": "base",
+  "icon": "briefcase"
 }

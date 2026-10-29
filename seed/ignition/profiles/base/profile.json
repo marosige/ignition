@@ -320,5 +320,6 @@
   },
   "copyFiles": [
     "Library/Keyboard Layouts/en_hu.keylayout"
-  ]
+  ],
+  "icon": "square.stack.3d.up"
 }

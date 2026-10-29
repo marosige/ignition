@@ -45,6 +45,9 @@ struct ProfileRow: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
+                    if let icon = state.icon(of: name) {
+                        Image(systemName: icon).foregroundStyle(state.color(of: name))
+                    }
                     Text(name.capitalized).font(.headline).foregroundStyle(state.color(of: name))
                     if state.device.editingProfile == name { pill("Editing", state.color(of: name)) }
                     if !on { pill("Not on this Mac", .secondary) }
@@ -71,6 +74,25 @@ struct ProfileRow: View {
                         }
                         .buttonStyle(.plain)
                         .help(c.rawValue.capitalized)
+                    }
+                }
+                HStack(spacing: 4) {
+                    Text("Icon").font(.caption).foregroundStyle(.secondary)
+                    Button { state.setIcon(nil, of: name) } label: {
+                        Text("Aa").font(.caption2.weight(.semibold))
+                            .frame(width: 22, height: 22)
+                            .background(Color.secondary.opacity(profile.icon == nil ? 0.3 : 0.1), in: .rect(cornerRadius: 6))
+                    }
+                    .buttonStyle(.plain)
+                    .help("No icon – show the name")
+                    ForEach(ProfileIcons.all, id: \.symbol) { item in
+                        Button { state.setIcon(item.symbol, of: name) } label: {
+                            Image(systemName: item.symbol).font(.caption)
+                                .frame(width: 22, height: 22)
+                                .background(state.color(of: name).opacity(profile.icon == item.symbol ? 0.3 : 0.0), in: .rect(cornerRadius: 6))
+                        }
+                        .buttonStyle(.plain)
+                        .help(item.label)
                     }
                 }
                 Text("\(profile.preferences.count) settings · \(packages) packages · \(profile.dock?.count ?? 0) Dock items")

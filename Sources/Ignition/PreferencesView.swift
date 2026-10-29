@@ -171,7 +171,11 @@ struct OriginPill: View {
         let color = state.color(of: origin.profile)
         Button { asking = true } label: {
             HStack(spacing: 4) {
-                Text(state.profileNames.count > 1 ? origin.profile.capitalized : "Saved")
+                if let icon = state.icon(of: origin.profile) {
+                    Image(systemName: icon)
+                } else {
+                    Text(state.profileNames.count > 1 ? origin.profile.capitalized : "Saved")
+                }
                 Text("·").opacity(0.6)
                 Text(state.formatted(def, origin.value))
             }
