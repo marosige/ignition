@@ -23,7 +23,7 @@ struct PreferencesView: View {
                 }
                 .disabled(!PreferenceCatalog.defs(in: category).contains { state.isManaged($0) })
             } footer: {
-                Text("Values marked “Saved” are part of your profile and get applied on every Mac. Reset removes them and restores the default of this macOS version.")
+                Text("Rows with a profile pill are part of your profile and get applied on every Mac that uses it. Click the Apple pill to reset one to the default of this macOS version.")
             }
         }
         .formStyle(.grouped)
