@@ -78,12 +78,13 @@ struct PreferenceRow: View {
     @ViewBuilder
     private var defaultHint: some View {
         if def.osDefault != nil, state.value(for: def) != def.osDefault {
-            Label {
-                Text(state.defaultText(def))
-            } icon: {
+            HStack(spacing: 3) {
                 Image(systemName: "apple.logo")
+                Text(state.defaultText(def))
             }
-            .font(.caption)
+            .font(.caption2.weight(.medium))
+            .padding(.horizontal, 7).padding(.vertical, 2)
+            .background(Color.secondary.opacity(0.15), in: .capsule)
             .foregroundStyle(.secondary)
             .help("macOS default")
         }
